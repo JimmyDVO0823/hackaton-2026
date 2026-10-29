@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Sidebar } from './layout/Sidebar';
-import { Header } from './layout/Header';
+import { MainLayout } from './layout/MainLayout';
 import { TableroPage } from './pages/TableroPage';
 import { AlarmModal } from './components/AlarmModal';
 import { useAlertas } from './hooks/useAlertas';
@@ -17,10 +16,10 @@ export function App() {
   const [alarmModalState, setAlarmModalState] = useState({
     isOpen: false,
     sectorName: '',
-    isEvacuation: false
+    isEvacuation: false,
   });
 
-  // Disparadores de Alarma
+  // ── Disparadores de Alarma ──────────────────────────────────────────────────
   const handleTriggerAlarm = (sectorName) => {
     setAlarmModalState({ isOpen: true, sectorName, isEvacuation: false });
   };
@@ -44,50 +43,49 @@ export function App() {
     }
   };
 
-  return (
-    <div className="bg-surface text-on-surface font-body-md select-none min-h-screen">
-      {/* Sidebar Lateral */}
-      <Sidebar
-        activeRoute={activeRoute}
-        onNavigate={setActiveRoute}
-        onTriggerSOS={handleTriggerSOS}
-        audioHabilitado={audioHabilitado}
-        onHabilitarAudio={habilitarAudio}
-      />
+  // ── Props del Sidebar ───────────────────────────────────────────────────────
+  const sidebarProps = {
+    activeRoute,
+    onNavigate: setActiveRoute,
+    onTriggerSOS: handleTriggerSOS,
+    audioHabilitado,
+    onHabilitarAudio: habilitarAudio,
+  };
 
-      {/* Contenedor con margen izquierdo compensando Sidebar */}
-      <div className="pl-72">
-        {/* Encabezado Superior */}
-        <Header />
-
-        {/* Contenido Principal / Pantalla Actual */}
-        <main className="w-full pt-16 bg-surface min-h-screen">
-          {activeRoute === 'tablero' ? (
-            <TableroPage onTriggerAlarm={handleTriggerAlarm} />
-          ) : (
-            <div className="p-8 text-center text-secondary">
-              <span className="material-symbols-outlined text-[48px] mb-2 block text-[#C29B38]">
-                construction
-              </span>
-              <h2 className="font-headline-md text-on-surface text-[20px] uppercase">
-                Módulo en Preparación: {activeRoute.toUpperCase()}
-              </h2>
-              <p className="font-body-md mt-2">
-                Este módulo se vinculará con los repositorios locales en próximas fases.
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveRoute('tablero')}
-                className="mt-4 px-4 py-2 bg-surface-container-high text-on-surface rounded font-action-label text-[12px] uppercase border border-[#2D3239]"
-              >
-                Volver al Tablero
-              </button>
-            </div>
-          )}
-        </main>
+  // ── Pantalla activa ─────────────────────────────────────────────────────────
+  const renderContent = () => {
+    if (activeRoute === 'tablero') {
+      return <TableroPage onTriggerAlarm={handleTriggerAlarm} />;
+    }
+    return (
+      <div className="p-8 text-center text-secondary">
+        <span className="material-symbols-outlined text-[48px] mb-2 block text-[#C29B38]">
+          construction
+        </span>
+        <h2 className="font-headline-md text-on-surface text-[20px] uppercase">
+          Módulo en Preparación: {activeRoute.toUpperCase()}
+        </h2>
+        <p className="font-body-md mt-2">
+          Este módulo se vinculará con los repositorios locales en próximas fases.
+        </p>
+        <button
+          type="button"
+          onClick={() => setActiveRoute('tablero')}
+          className="mt-4 px-4 py-2 bg-surface-container-high text-on-surface rounded font-action-label text-[12px] uppercase border border-[#2D3239]"
+        >
+          Volver al Tablero
+        </button>
       </div>
+    );
+  };
 
-      {/* Modal de Alarma */}
+  return (
+    <>
+      <MainLayout sidebarProps={sidebarProps}>
+        {renderContent()}
+      </MainLayout>
+
+      {/* Modal de Alarma — fuera del layout para quedar encima de todo */}
       <AlarmModal
         isOpen={alarmModalState.isOpen}
         sectorName={alarmModalState.sectorName}
@@ -98,7 +96,7 @@ export function App() {
         }}
         onConfirm={handleConfirmAlarm}
       />
-    </div>
+    </>
   );
 }
 
