@@ -14,6 +14,7 @@ export function NodoCard({
   onActivarBocina,
   bocinaActiva = false,
   onVerHistorial,
+  onEliminarSensor,
 }) {
   const [ahora] = useState(() => Date.now());
 
@@ -311,6 +312,22 @@ export function NodoCard({
 
         {/* Acciones: Ver Historial + Bocina */}
         <div className="flex items-center gap-2">
+          {nodo.personalizado && onEliminarSensor && (
+            <button
+              type="button"
+              onClick={(ev) => {
+                ev.stopPropagation();
+                if (window.confirm(`¿Retirar el sensor "${nombre}" de la red de monitoreo?`)) {
+                  onEliminarSensor(id);
+                }
+              }}
+              title={`Retirar sensor ${nombre}`}
+              className="min-h-[40px] px-3 rounded flex items-center gap-1 font-action-label text-[12px] uppercase border bg-surface-container-high hover:bg-[#B2533E]/20 text-secondary hover:text-[#D87661] border-[#2D3239] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          )}
+
           {onVerHistorial && (
             <button
               type="button"

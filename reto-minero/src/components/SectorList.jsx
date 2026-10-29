@@ -19,6 +19,8 @@ export function SectorList({
   onBocinaGlobal,
   bocinaGlobalActiva = false,
   onVerHistorial,
+  onAgregarSensor,
+  onEliminarSensor,
 }) {
   const [mostrarTodos, setMostrarTodos] = useState(false);
 
@@ -52,6 +54,17 @@ export function SectorList({
           >
             <span className="material-symbols-outlined text-[20px]">restart_alt</span>
           </button>
+          {onAgregarSensor && (
+            <button
+              type="button"
+              onClick={onAgregarSensor}
+              title="Añadir nuevo sensor a la red de monitoreo"
+              className="min-h-[48px] px-3 bg-[#C29B38]/15 hover:bg-[#C29B38]/25 text-[#E0B853] rounded flex items-center justify-center gap-1.5 font-action-label text-[12px] uppercase font-bold border border-[#C29B38]/40 transition-colors whitespace-nowrap"
+            >
+              <span className="material-symbols-outlined text-[20px]">add_circle</span>
+              <span className="hidden sm:inline">Sensor</span>
+            </button>
+          )}
         </div>
 
         {/* Selector de modo: Mostrar Todos vs Solo Filtrados */}
@@ -144,6 +157,7 @@ export function SectorList({
                 onActivarBocina={onToggleBocina}
                 bocinaActiva={bocinaGlobalActiva || !!bocinasActivas[nodo.id]}
                 onVerHistorial={onVerHistorial}
+                onEliminarSensor={onEliminarSensor}
               />
             </div>
           ))

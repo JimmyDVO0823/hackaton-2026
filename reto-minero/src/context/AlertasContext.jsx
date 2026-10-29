@@ -18,18 +18,101 @@ import { alertasRepo } from '../data/repositorio.js';
 
 export const AlertasContext = createContext(null);
 
+const STORAGE_KEY_SENSORES = 'atmo_sensores_personalizados';
+
+// Lectura base de un sensor recién instalado (aire limpio, transmitiendo ahora)
+function lecturaInicial(fecha = new Date()) {
+  return {
+    ch4: 0.1,
+    o2: 20.9,
+    co: 0,
+    h2s: 0,
+    nox: 0,
+    co2: 400,
+    pm25: 10.0,
+    pm10: 25.0,
+    tendenciaPm25: 'ESTABLE',
+    tendenciaPm10: 'ESTABLE',
+    aumentoSostenidoPm25: false,
+    aumentoSostenidoPm10: false,
+    temperatura: 24.0,
+    humedad: 70,
+    fecha: fecha.toISOString(),
+  };
+}
+
+function cargarSensoresPersonalizados() {
+  try {
+    const guardado = localStorage.getItem(STORAGE_KEY_SENSORES);
+    const lista = guardado ? JSON.parse(guardado) : [];
+    return Array.isArray(lista) ? lista : [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarSensoresPersonalizados(lista) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SENSORES, JSON.stringify(lista));
+  } catch {
+    // Almacenamiento no disponible: el sensor queda solo en memoria
+  }
+}
+
+// Sensores registrados por el usuario, con lectura simulada renovada al cargar
+function obtenerSensoresPersonalizados(ahora = new Date()) {
+  return cargarSensoresPersonalizados().map((s) => ({
+    ...s,
+    lectura: lecturaInicial(ahora),
+    alarmaLocalActiva: false,
+    personalizado: true,
+  }));
+}
+
 export function AlertasProvider({ children }) {
   const { mostrarToast } = useToast();
 
   // 1. Estado en memoria de los nodos (con evaluación inicial calculada)
   const [nodos, setNodos] = useState(() => {
-    const raw = obtenerNodosEjemplo();
     const ahora = new Date();
+    const raw = [...obtenerNodosEjemplo(ahora), ...obtenerSensoresPersonalizados(ahora)];
     return raw.map((nodo) => ({
       ...nodo,
       evaluacion: evaluarNodo(nodo, ahora),
     }));
   });
+
+  // Registrar un sensor nuevo en la red de monitoreo
+  const agregarSensor = useCallback((datos) => {
+    const ahora = new Date();
+    const id = `sensor-${Date.now()}`;
+    const definicion = {
+      id,
+      nombre: datos.nombre.trim(),
+      ubicacion: datos.ubicacion.trim(),
+      tipoSitio: datos.tipoSitio,
+      nivel: datos.nivel,
+      mapCoords: { left: `${datos.x}px`, top: `${datos.y}px` },
+    };
+    guardarSensoresPersonalizados([...cargarSensoresPersonalizados(), definicion]);
+
+    const nodo = {
+      ...definicion,
+      lectura: lecturaInicial(ahora),
+      alarmaLocalActiva: false,
+      personalizado: true,
+    };
+    setNodos((prev) => [...prev, { ...nodo, evaluacion: evaluarNodo(nodo, ahora) }]);
+    mostrarToast(`Sensor "${definicion.nombre}" añadido en ${definicion.nivel}.`, 'success');
+    return nodo;
+  }, [mostrarToast]);
+
+  // Retirar un sensor añadido por el usuario (los de la instalación base no se eliminan)
+  const eliminarSensor = useCallback((nodoId) => {
+    guardarSensoresPersonalizados(cargarSensoresPersonalizados().filter((s) => s.id !== nodoId));
+    setNodos((prev) => prev.filter((n) => !(n.personalizado && n.id === nodoId)));
+    mostrarToast('Sensor retirado de la red de monitoreo.', 'info');
+  }, [mostrarToast]);
 
   // 2. Generar alertas desde los nodos en ALARMA o EVACUACION al cargar
   const [alertas, setAlertas] = useState(() => {
@@ -262,8 +345,12 @@ export function AlertasProvider({ children }) {
       confirmarEvacuacionGeneral,
       probarAlarma,
       activarSirenasTodosLosNodos,
+      agregarSensor,
+      eliminarSensor,
     }),
     [
+      agregarSensor,
+      eliminarSensor,
       nodos,
       alertas,
       audioHabilitado,

@@ -5,9 +5,11 @@ import { useAlertasContext } from '../context/AlertasContext.jsx';
  * REGLA: Los componentes NUNCA leen un estado escrito a mano; siempre usan la evaluación calculada.
  */
 export function useNodos() {
-  const { nodos, activarSirenasTodosLosNodos } = useAlertasContext();
+  const { nodos, activarSirenasTodosLosNodos, agregarSensor, eliminarSensor } = useAlertasContext();
   return {
     nodos,
     activarSirenasTodosLosNodos,
+    agregarSensor,
+    eliminarSensor,
   };
 }

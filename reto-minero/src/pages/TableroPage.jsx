@@ -4,6 +4,7 @@ import { MineMap } from '../components/MineMap';
 import { SectorList } from '../components/SectorList';
 import { FooterBar } from '../layout/FooterBar';
 import { ZonasPolvoPanel } from '../components/ZonasPolvoPanel';
+import { ModalNuevoSensor } from '../components/ModalNuevoSensor';
 import { useNodos } from '../hooks/useNodos';
 import { useAlertasContext } from '../context/AlertasContext.jsx';
 
@@ -21,9 +22,11 @@ export function TableroPage({
   onVerHistorial,
   onAbrirIniciarTurno,
 }) {
-  const { nodos } = useNodos();
+  const { nodos, agregarSensor, eliminarSensor } = useNodos();
   const { audioHabilitado, habilitarAudio } = useAlertasContext();
   const handleIniciarTurno = onAbrirIniciarTurno || habilitarAudio;
+
+  const [modalNuevoSensorOpen, setModalNuevoSensorOpen] = useState(false);
 
   const [activeFilter, setActiveFilter]     = useState(null);
   const [searchTerm, setSearchTerm]         = useState('');
@@ -140,8 +143,22 @@ export function TableroPage({
           bocinaGlobalActiva={bocinaGlobalActiva}
           onBocinaGlobal={handleBocinaGlobal}
           onVerHistorial={onVerHistorial}
+          onAgregarSensor={() => setModalNuevoSensorOpen(true)}
+          onEliminarSensor={(nodoId) => {
+            eliminarSensor(nodoId);
+            if (selectedNodoId === nodoId) setSelectedNodoId(null);
+          }}
         />
       </div>
+
+      <ModalNuevoSensor
+        isOpen={modalNuevoSensorOpen}
+        onClose={() => setModalNuevoSensorOpen(false)}
+        onGuardar={(datos) => {
+          const nuevo = agregarSensor(datos);
+          setSelectedNodoId(nuevo.id);
+        }}
+      />
 
       {/* 3. Panel de Identificación de Zonas con Monitoreo de Polvo (PM2.5 / PM10) */}
       <ZonasPolvoPanel
