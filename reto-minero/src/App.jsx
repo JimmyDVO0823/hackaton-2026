@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { MainLayout } from './layout/MainLayout';
 import { TableroPage } from './pages/TableroPage';
 import { AlarmModal } from './components/AlarmModal';
@@ -7,7 +7,7 @@ import { useAlertas } from './hooks/useAlertas';
 /**
  * Raíz de la aplicación ATMO-MONITOR.
  * Gestiona la ruta activa, el modal de alarma y los handlers de SOS.
- * REGLA: No contiene lógica de negocio; delega en hooks y páginas.
+ * Sincroniza el estado de las bocinas entre el Sidebar y el menú derecho del Tablero.
  */
 export function App() {
   const { audioHabilitado, habilitarAudio, dispararAlerta, silenciar } = useAlertas();
@@ -18,6 +18,39 @@ export function App() {
     sectorName: '',
     isEvacuation: false,
   });
+
+  // ── Bocinas sincronizadas (Sitios específicos + Global) ─────────────────────
+  const [bocinasActivas, setBocinasActivas] = useState({}); // { [nodoId]: boolean }
+  const [bocinaGlobalActiva, setBocinaGlobalActiva] = useState(false);
+
+  // Hay bocina activa si la global está encendida o al menos un sitio individual lo está
+  const hayBocinaActiva = bocinaGlobalActiva || Object.values(bocinasActivas).some(Boolean);
+
+  const handleToggleBocinaNodo = useCallback((nodoId) => {
+    // Si la bocina global estaba activa y se desactiva un nodo, se apaga el modo global
+    setBocinasActivas((prev) => ({ ...prev, [nodoId]: !prev[nodoId] }));
+  }, []);
+
+  const handleBocinaGlobal = useCallback(() => {
+    setBocinaGlobalActiva((prev) => {
+      const next = !prev;
+      if (!next) setBocinasActivas({});
+      return next;
+    });
+  }, []);
+
+  // Control desde el Sidebar: si hay alguna bocina activa apaga todo; si no, activa la global
+  const handleToggleBocinaSidebar = useCallback(() => {
+    if (!audioHabilitado) {
+      habilitarAudio?.();
+    }
+    if (hayBocinaActiva) {
+      setBocinaGlobalActiva(false);
+      setBocinasActivas({});
+    } else {
+      setBocinaGlobalActiva(true);
+    }
+  }, [hayBocinaActiva, audioHabilitado, habilitarAudio]);
 
   // ── Disparadores de Alarma ──────────────────────────────────────────────────
   const handleTriggerAlarm = (sectorName) => {
@@ -43,19 +76,27 @@ export function App() {
     }
   };
 
-  // ── Props del Sidebar ───────────────────────────────────────────────────────
+  // ── Props del Sidebar (incluye estado de bocina sincronizado) ───────────────
   const sidebarProps = {
     activeRoute,
     onNavigate: setActiveRoute,
     onTriggerSOS: handleTriggerSOS,
-    audioHabilitado,
-    onHabilitarAudio: habilitarAudio,
+    bocinaActiva: hayBocinaActiva,
+    onToggleBocina: handleToggleBocinaSidebar,
   };
 
   // ── Pantalla activa ─────────────────────────────────────────────────────────
   const renderContent = () => {
     if (activeRoute === 'tablero') {
-      return <TableroPage onTriggerAlarm={handleTriggerAlarm} />;
+      return (
+        <TableroPage
+          onTriggerAlarm={handleTriggerAlarm}
+          bocinasActivas={bocinasActivas}
+          onToggleBocina={handleToggleBocinaNodo}
+          bocinaGlobalActiva={bocinaGlobalActiva}
+          onBocinaGlobal={handleBocinaGlobal}
+        />
+      );
     }
     return (
       <div className="p-8 text-center text-secondary">

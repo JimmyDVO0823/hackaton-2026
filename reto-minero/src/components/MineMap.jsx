@@ -35,10 +35,10 @@ const ZOOM_STEP = 0.15;
  * - Importar plano DXF (solo selector visual).
  */
 export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNodoId }) {
-  const NIVELES = ['N-2', 'N-1', 'N-3'];
+  const NIVELES = ['N-1', 'N-2', 'N-3'];
 
   // ── Filtro de nivel (null = mostrar todos los niveles) ────────────────────────
-  const [activeLevel, setActiveLevel] = useState('N-2');
+  const [activeLevel, setActiveLevel] = useState('N-1');
   const showAll = activeLevel === null;
 
   const nodosFiltrados = showAll
@@ -253,6 +253,7 @@ export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNo
               const peor  = peorNivel(nodosDelNivel);
               const color = PALETA[peor]?.border ?? '#4A7A5B';
               const isActive = activeLevel === lvl;
+              const etiqueta = lvl === 'N-1' ? 'Nivel 1' : lvl === 'N-2' ? 'Nivel 2' : 'Nivel 3';
               return (
                 <button
                   key={lvl}
@@ -265,7 +266,7 @@ export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNo
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                  {lvl}
+                  {etiqueta}
                 </button>
               );
             })}

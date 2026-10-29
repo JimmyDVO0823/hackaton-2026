@@ -13,7 +13,7 @@ export function SectorList({
   onResetFilters,
   selectedNodoId,
   onSelectNodo,
-  onTriggerAlarm,
+  _onTriggerAlarm,
   bocinasActivas = {},
   onToggleBocina,
   onBocinaGlobal,

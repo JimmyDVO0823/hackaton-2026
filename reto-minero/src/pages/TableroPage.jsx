@@ -10,29 +10,37 @@ import { useNodos } from '../hooks/useNodos';
  * REGLA: pages/ contiene las pantallas del flujo de usuario.
  * Obtiene los nodos con evaluación calculada desde useNodos.
  */
-export function TableroPage({ onTriggerAlarm }) {
+export function TableroPage({
+  onTriggerAlarm,
+  bocinasActivas: bocinasActivasProp,
+  onToggleBocina: onToggleBocinaProp,
+  bocinaGlobalActiva: bocinaGlobalActivaProp,
+  onBocinaGlobal: onBocinaGlobalProp,
+}) {
   const { nodos } = useNodos();
 
   const [activeFilter, setActiveFilter]     = useState(null);
   const [searchTerm, setSearchTerm]         = useState('');
   const [selectedNodoId, setSelectedNodoId] = useState(null);
 
-  // ── Bocinas ──────────────────────────────────────────────────────────────────
-  const [bocinasActivas, setBocinasActivas] = useState({});   // { [nodoId]: boolean }
-  const [bocinaGlobalActiva, setBocinaGlobalActiva] = useState(false);
+  // ── Bocinas sincronizadas (usa props o fallback local) ────────────────────────
+  const [bocinasActivasLocal, setBocinasActivasLocal] = useState({});
+  const [bocinaGlobalActivaLocal, setBocinaGlobalActivaLocal] = useState(false);
 
-  const handleToggleBocina = useCallback((nodoId) => {
-    setBocinasActivas((prev) => ({ ...prev, [nodoId]: !prev[nodoId] }));
-  }, []);
+  const bocinasActivas = bocinasActivasProp ?? bocinasActivasLocal;
+  const bocinaGlobalActiva = bocinaGlobalActivaProp ?? bocinaGlobalActivaLocal;
 
-  const handleBocinaGlobal = useCallback(() => {
-    setBocinaGlobalActiva((prev) => {
+  const handleToggleBocina = onToggleBocinaProp ?? ((nodoId) => {
+    setBocinasActivasLocal((prev) => ({ ...prev, [nodoId]: !prev[nodoId] }));
+  });
+
+  const handleBocinaGlobal = onBocinaGlobalProp ?? (() => {
+    setBocinaGlobalActivaLocal((prev) => {
       const next = !prev;
-      // Al desactivar global, limpiamos también las individuales
-      if (!next) setBocinasActivas({});
+      if (!next) setBocinasActivasLocal({});
       return next;
     });
-  }, []);
+  });
 
   // ── Selección de nodo ────────────────────────────────────────────────────────
   const handleSelectNodo = useCallback((nodoId) => {

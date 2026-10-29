@@ -4,18 +4,22 @@ import React from 'react';
  * Barra lateral de navegación comprimible para tabletas mineras industriales.
  * - Expandida : w-72  — icono + etiqueta
  * - Colapsada : w-16  — solo icono (tooltip nativo al hacer hover)
- *
- * REGLA: layout/ contiene la barra lateral y barra superior.
+ * - Bocina sincronizada con las bocinas del menú de la derecha (global / por sitio).
  */
 export function Sidebar({
   activeRoute = 'tablero',
   onNavigate,
   onTriggerSOS,
+  bocinaActiva = false,
+  onToggleBocina,
   audioHabilitado = false,
   onHabilitarAudio,
   collapsed = false,
   onToggleCollapse,
 }) {
+  const isBocinaOn = bocinaActiva || audioHabilitado;
+  const handleToggle = onToggleBocina || onHabilitarAudio;
+
   const navItems = [
     { id: 'tablero',               label: 'Tablero',            icon: 'grid_view' },
     { id: 'historial',             label: 'Historial',          icon: 'history'   },
@@ -59,26 +63,28 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* ── Control de Audio ────────────────────────────────────────── */}
+        {/* ── Control de Bocina (Sincronizado con menú derecho) ───────── */}
         {!collapsed && (
           <div className="p-3 mx-2 mt-2 bg-surface-container-lowest rounded border border-[#2D3239] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
-              <span className={`material-symbols-outlined text-[18px] ${audioHabilitado ? 'text-[#6DAA81]' : 'text-[#C2A855]'}`}>
-                {audioHabilitado ? 'volume_up' : 'volume_off'}
+              <span className={`material-symbols-outlined text-[20px] ${isBocinaOn ? 'text-[#6DAA81] animate-pulse' : 'text-[#C2A855]'}`}>
+                {isBocinaOn ? 'volume_up' : 'volume_off'}
               </span>
               <span className="font-code-badge text-[11px] text-secondary whitespace-nowrap">
-                {audioHabilitado ? 'Sonido Activo' : 'Audio en Espera'}
+                {isBocinaOn ? 'Bocina Activada' : 'Bocina Desactivada'}
               </span>
             </div>
-            {!audioHabilitado && (
-              <button
-                type="button"
-                onClick={onHabilitarAudio}
-                className="px-2 py-1 bg-surface-container-high hover:bg-surface-variant text-on-surface text-[10px] font-bold uppercase rounded border border-[#2D3239] whitespace-nowrap"
-              >
-                Activar
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleToggle}
+              className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded border whitespace-nowrap transition-colors ${
+                isBocinaOn
+                  ? 'bg-[#4A7A5B]/25 text-[#6DAA81] hover:bg-[#4A7A5B]/40 border-[#4A7A5B]'
+                  : 'bg-surface-container-high hover:bg-surface-variant text-on-surface border-[#2D3239]'
+              }`}
+            >
+              {isBocinaOn ? 'Apagar' : 'Activar'}
+            </button>
           </div>
         )}
 
@@ -86,12 +92,16 @@ export function Sidebar({
           <div className="flex justify-center mt-3 shrink-0">
             <button
               type="button"
-              onClick={onHabilitarAudio}
-              title={audioHabilitado ? 'Sonido activo' : 'Activar audio'}
-              className="w-10 h-10 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors"
+              onClick={handleToggle}
+              title={isBocinaOn ? 'Bocina Activada — clic para apagar' : 'Bocina Desactivada — clic para activar'}
+              className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
+                isBocinaOn
+                  ? 'bg-[#4A7A5B]/20 text-[#6DAA81] border border-[#4A7A5B]/50'
+                  : 'hover:bg-surface-container-high text-[#C2A855]'
+              }`}
             >
-              <span className={`material-symbols-outlined text-[22px] ${audioHabilitado ? 'text-[#6DAA81]' : 'text-[#C2A855]'}`}>
-                {audioHabilitado ? 'volume_up' : 'volume_off'}
+              <span className={`material-symbols-outlined text-[22px] ${isBocinaOn ? 'animate-pulse' : ''}`}>
+                {isBocinaOn ? 'volume_up' : 'volume_off'}
               </span>
             </button>
           </div>
@@ -133,7 +143,7 @@ export function Sidebar({
         </nav>
       </div>
 
-      {/* ── Pie: solo botón SOS ─────────────────────────────────────── */}
+      {/* ── Pie: botón SOS ─────────────────────────────────────────── */}
       <div className={`border-t border-[#2D3239] bg-surface-container-lowest ${collapsed ? 'p-2' : 'p-space-md'}`}>
         <button
           type="button"
