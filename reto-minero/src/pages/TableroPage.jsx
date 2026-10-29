@@ -86,6 +86,7 @@ export function TableroPage({ onTriggerAlarm }) {
 
         <SectorList
           nodos={nodosFiltrados}
+          todosLosNodos={nodos}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           onResetFilters={() => {

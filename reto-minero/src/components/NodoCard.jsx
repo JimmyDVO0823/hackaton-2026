@@ -6,7 +6,7 @@ import { LIMITES_DECRETO_1886 } from '../config/limites.js';
  * Tarjeta individual de nodo sensor con telemetría y estado calculado.
  * REGLA: Nunca lee un estado escrito a mano; usa nodo.evaluacion.
  */
-export function NodoCard({ nodo, isSelected, onTriggerAlarm, onActivarBocina, bocinaActiva = false }) {
+export function NodoCard({ nodo, isSelected, onActivarBocina, bocinaActiva = false }) {
   const { id, nombre, ubicacion, tipoSitio, nivel, lectura, alarmaLocalActiva, evaluacion } = nodo;
   const nivelRiesgo = evaluacion?.nivel ?? 'NORMAL';
   const alertaPrincipal = evaluacion?.alertaPrincipal;
@@ -136,8 +136,6 @@ export function NodoCard({ nodo, isSelected, onTriggerAlarm, onActivarBocina, bo
           </p>
           <p className="font-code-badge text-[10px] text-secondary">
             Último CH₄ registrado: <strong className="text-on-surface">{lectura?.ch4?.toFixed(1) ?? '--'}%</strong>
-            &nbsp;· Batería: <strong className="text-on-surface">{lectura?.bateria ?? '--'}%</strong>
-            &nbsp;· RSSI: <strong className="text-on-surface">{lectura?.rssi ?? '--'} dBm</strong>
           </p>
         </div>
       ) : (
@@ -190,16 +188,6 @@ export function NodoCard({ nodo, isSelected, onTriggerAlarm, onActivarBocina, bo
           <span className="flex items-center gap-1">
             <span className="material-symbols-outlined text-[15px]">schedule</span>
             <span>{tiempoTexto}</span>
-          </span>
-          <span>·</span>
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px]">battery_std</span>
-            <span>{lectura?.bateria ?? '--'}%</span>
-          </span>
-          <span>·</span>
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px]">wifi</span>
-            <span>{lectura?.rssi ?? '--'} dBm</span>
           </span>
         </div>
 

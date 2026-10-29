@@ -1,16 +1,15 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { LIMITES_DECRETO_1886 } from '../config/limites.js';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 
 /** Prioridad de nivel para calcular el peor estado de un nivel de galería */
 const PRIORIDAD = { NORMAL: 0, SIN_SEÑAL: 1, PRECAUCION: 2, ALARMA: 3, EVACUACION: 4 };
 
 /** Paleta semafórica por nivel evaluado */
 const PALETA = {
-  NORMAL:     { border: '#4A7A5B', text: '#6DAA81',  bg: 'rgba(74,122,91,0.12)',  badge: 'rgba(74,122,91,0.18)',  icon: 'check_circle'         },
-  PRECAUCION: { border: '#A38A3A', text: '#C2A855',  bg: 'rgba(163,138,58,0.12)', badge: 'rgba(163,138,58,0.18)', icon: 'warning_amber'         },
-  ALARMA:     { border: '#B2533E', text: '#D87661',  bg: 'rgba(178,83,62,0.12)',  badge: 'rgba(178,83,62,0.18)',  icon: 'report'                },
-  EVACUACION: { border: '#8B3232', text: '#D97575',  bg: 'rgba(139,50,50,0.18)',  badge: 'rgba(139,50,50,0.25)',  icon: 'sos'                   },
-  SIN_SEÑAL:  { border: '#5A606E', text: '#9DA3B2',  bg: 'rgba(90,96,110,0.10)',  badge: 'rgba(90,96,110,0.15)',  icon: 'signal_disconnected'   },
+  NORMAL:     { border: '#4A7A5B', text: '#6DAA81',  bg: 'rgba(74,122,91,0.12)',  badge: 'rgba(74,122,91,0.18)',  icon: 'check_circle'       },
+  PRECAUCION: { border: '#A38A3A', text: '#C2A855',  bg: 'rgba(163,138,58,0.12)', badge: 'rgba(163,138,58,0.18)', icon: 'warning_amber'       },
+  ALARMA:     { border: '#B2533E', text: '#D87661',  bg: 'rgba(178,83,62,0.12)',  badge: 'rgba(178,83,62,0.18)',  icon: 'report'              },
+  EVACUACION: { border: '#8B3232', text: '#D97575',  bg: 'rgba(139,50,50,0.18)',  badge: 'rgba(139,50,50,0.25)',  icon: 'sos'                 },
+  SIN_SEÑAL:  { border: '#5A606E', text: '#9DA3B2',  bg: 'rgba(90,96,110,0.10)',  badge: 'rgba(90,96,110,0.15)',  icon: 'signal_disconnected' },
 };
 
 function peorNivel(nodos) {
@@ -20,40 +19,116 @@ function peorNivel(nodos) {
   }, 'NORMAL');
 }
 
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;
+const BASE_WIDTH = 960;
+const BASE_HEIGHT = 540;
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 3.0;
 const ZOOM_STEP = 0.15;
 
 /**
- * Esquema técnico de galerías subterráneas con zoom y pan.
- * - Rueda del ratón: zoom centrado en el cursor.
- * - Arrastrar: pan del mapa.
- * - Botones +/- y reset: zoom programático.
- * - Seleccionar un nodo en la lista lo resalta aquí también.
+ * Esquema técnico de galerías subterráneas.
+ * Funcionalidades:
+ * - Filtro por nivel de galería o vista general sin filtros ("Todos").
+ * - Zoom con rueda del ratón y botones +/−/reset.
+ * - Pan arrastrando el mapa con el ratón.
+ * - Pantalla completa estable (mantiene la proporción y alineación de nodos y túneles).
+ * - Importar plano DXF (solo selector visual).
  */
-export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNodoId }) {
+export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNodoId }) {
+  const NIVELES = ['N-2', 'N-1', 'N-3'];
+
+  // ── Filtro de nivel (null = mostrar todos los niveles) ────────────────────────
   const [activeLevel, setActiveLevel] = useState('N-2');
+  const showAll = activeLevel === null;
+
+  const nodosFiltrados = showAll
+    ? nodos
+    : nodos.filter((n) => n.nivel === activeLevel);
+
+  const nodosCriticos = nodosFiltrados.filter(
+    (n) => n.evaluacion?.nivel === 'ALARMA' || n.evaluacion?.nivel === 'EVACUACION'
+  );
 
   // ── Zoom / Pan ───────────────────────────────────────────────────────────────
-  const [zoom, setZoom]     = useState(1);
-  const [pan, setPan]       = useState({ x: 0, y: 0 });
-  const dragging            = useRef(false);
-  const dragStart           = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  const containerRef        = useRef(null);
+  const [zoom, setZoom]   = useState(1);
+  const [pan, setPan]     = useState({ x: 0, y: 0 });
+  const dragging          = useRef(false);
+  const dragStart         = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const containerRef      = useRef(null);
+  const sectionRef        = useRef(null);
+  const dxfInputRef       = useRef(null);
 
   const clampZoom = (z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
+  // Ajustar mapa centrado en el contenedor disponible
+  const fitToContainer = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const scaleX = (rect.width - 24) / BASE_WIDTH;
+    const scaleY = (rect.height - 48) / BASE_HEIGHT;
+    const targetScale = clampZoom(Math.min(scaleX, scaleY));
+
+    const centerX = (rect.width - BASE_WIDTH * targetScale) / 2;
+    const centerY = (rect.height - BASE_HEIGHT * targetScale) / 2;
+
+    setZoom(targetScale);
+    setPan({ x: Math.round(centerX), y: Math.max(0, Math.round(centerY)) });
+  }, []);
+
+  // ── Pantalla completa ────────────────────────────────────────────────────────
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
+      // Re-centrar mapa en el nuevo tamaño tras entrar/salir de fullscreen
+      setTimeout(() => fitToContainer(), 100);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, [fitToContainer]);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        if (sectionRef.current?.requestFullscreen) {
+          await sectionRef.current.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Error al alternar pantalla completa:', err);
+    }
+  }, []);
+
+  // ── Importar DXF (UI solamente) ──────────────────────────────────────────────
+  const [dxfFileName, setDxfFileName] = useState(null);
+
+  const handleDxfChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDxfFileName(file.name);
+    e.target.value = '';
+  }, []);
+
+  // ── Zoom con rueda del ratón ─────────────────────────────────────────────────
   const handleWheel = useCallback((e) => {
     e.preventDefault();
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
     setZoom((prevZoom) => {
-      const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      const delta    = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
       const nextZoom = clampZoom(prevZoom + delta);
-      // Ajusta el pan para que el punto bajo el cursor no se mueva
-      const scale = nextZoom / prevZoom;
+      const scale    = nextZoom / prevZoom;
       setPan((prevPan) => ({
         x: mouseX - scale * (mouseX - prevPan.x),
         y: mouseY - scale * (mouseY - prevPan.y),
@@ -63,49 +138,40 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
   }, []);
 
   const handleMouseDown = useCallback((e) => {
-    // Solo arrastrar con botón izquierdo y no sobre un botón de nodo
     if (e.button !== 0) return;
     dragging.current = true;
     dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-    e.currentTarget.style.cursor = 'grabbing';
+    if (containerRef.current) containerRef.current.style.cursor = 'grabbing';
   }, [pan]);
 
   const handleMouseMove = useCallback((e) => {
     if (!dragging.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
+    setPan({
+      x: dragStart.current.panX + (e.clientX - dragStart.current.x),
+      y: dragStart.current.panY + (e.clientY - dragStart.current.y),
+    });
   }, []);
 
-  const handleMouseUp = useCallback((e) => {
+  const handleMouseUp = useCallback(() => {
     dragging.current = false;
     if (containerRef.current) containerRef.current.style.cursor = 'grab';
   }, []);
 
-  const handleZoomIn  = () => {
-    setZoom((z) => clampZoom(z + ZOOM_STEP * 2));
-  };
-  const handleZoomOut = () => {
-    setZoom((z) => clampZoom(z - ZOOM_STEP * 2));
-  };
-  const handleZoomReset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  };
-
-  // ── Datos ────────────────────────────────────────────────────────────────────
-  const NIVELES = ['N-2', 'N-1', 'N-3'];
-  const nodosFiltrados = nodos.filter(n => n.nivel === activeLevel);
-
-  const nodosCriticos = nodos.filter(
-    n => n.nivel === activeLevel &&
-    (n.evaluacion?.nivel === 'ALARMA' || n.evaluacion?.nivel === 'EVACUACION')
-  );
+  const handleZoomIn    = () => setZoom((z) => clampZoom(z + ZOOM_STEP * 2));
+  const handleZoomOut   = () => setZoom((z) => clampZoom(z - ZOOM_STEP * 2));
+  const handleZoomReset = () => fitToContainer();
 
   return (
-    <section className="lg:col-span-7 flex flex-col bg-surface-container rounded border border-[#2D3239] p-space-md gap-space-md">
-      {/* ── Encabezado ──────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-low p-2.5 rounded border border-[#2D3239]">
+    <section
+      ref={sectionRef}
+      className={`lg:col-span-7 flex flex-col bg-surface-container rounded border border-[#2D3239] p-space-md gap-space-md ${
+        isFullscreen
+          ? 'fixed inset-0 z-[9999] w-screen h-screen rounded-none border-0 p-4 bg-[#14161a] overflow-hidden'
+          : ''
+      }`}
+    >
+      {/* ── Encabezado ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-low p-2.5 rounded border border-[#2D3239] shrink-0">
         <div className="flex items-center gap-space-sm">
           <span className="material-symbols-outlined text-[#C29B38] text-[24px]">hub</span>
           <div className="flex flex-col">
@@ -114,31 +180,77 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
             </h2>
             <span className="font-code-badge text-[11px] text-secondary">
               PROYECCIÓN TÉCNICA OPERATIVA · DEC. 1886 DE 2015
+              {dxfFileName && (
+                <span className="ml-2 text-[#C29B38]">· DXF: {dxfFileName}</span>
+              )}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-space-sm">
-          {/* Botón centrar críticos — solo si hay alguno */}
+        {/* ── Controles de cabecera ─────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Centrar críticos */}
           {nodosCriticos.length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                const critico = nodosCriticos[0];
-                onSelectNodo(critico.id);
-              }}
-              className="min-h-[48px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center gap-1.5 font-action-label text-[13px] uppercase border border-[#2D3239] transition-all active:scale-[0.98]"
+              onClick={() => onSelectNodo(nodosCriticos[0].id)}
+              title="Centrar en nodo crítico"
+              className="min-h-[42px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center gap-1.5 font-action-label text-[13px] uppercase border border-[#2D3239] transition-all active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-[#C29B38] text-[20px]">filter_center_focus</span>
               <span>Centrar Críticos</span>
             </button>
           )}
 
-          {/* Selectores de nivel con punto de peor estado */}
+          {/* Importar DXF (solo UI) */}
+          <input
+            ref={dxfInputRef}
+            type="file"
+            accept=".dxf"
+            className="hidden"
+            onChange={handleDxfChange}
+          />
+          <button
+            type="button"
+            onClick={() => dxfInputRef.current?.click()}
+            title="Importar plano en formato DXF"
+            className="min-h-[42px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center gap-1.5 font-action-label text-[13px] uppercase border border-[#2D3239] transition-colors active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined text-[20px]">upload_file</span>
+            <span>Importar DXF</span>
+          </button>
+
+          {/* Pantalla completa */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            className="min-h-[42px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center gap-1.5 font-action-label text-[13px] uppercase border border-[#2D3239] transition-colors active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+            </span>
+            <span>{isFullscreen ? 'Salir' : 'Pantalla Completa'}</span>
+          </button>
+
+          {/* Selectores de nivel + opción "Todos" */}
           <div className="flex items-center bg-surface-container-lowest p-1 rounded border border-[#2D3239]">
+            <button
+              type="button"
+              onClick={() => setActiveLevel(null)}
+              className={`min-h-[42px] px-3 font-code-badge text-[12px] rounded transition-colors flex items-center gap-1.5 ${
+                showAll
+                  ? 'bg-surface-container-high text-on-surface font-semibold border border-[#2D3239]'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">layers</span>
+              Todos
+            </button>
+
             {NIVELES.map((lvl) => {
-              const nodosDelNivel = nodos.filter(n => n.nivel === lvl);
-              const peor = peorNivel(nodosDelNivel);
+              const nodosDelNivel = nodos.filter((n) => n.nivel === lvl);
+              const peor  = peorNivel(nodosDelNivel);
               const color = PALETA[peor]?.border ?? '#4A7A5B';
               const isActive = activeLevel === lvl;
               return (
@@ -152,11 +264,7 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
                       : 'text-secondary hover:text-on-surface'
                   }`}
                 >
-                  {/* Punto de estado */}
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: color }}
-                  />
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                   {lvl}
                 </button>
               );
@@ -165,10 +273,10 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
         </div>
       </div>
 
-      {/* ── Canvas Blueprint con Zoom/Pan ─────────────────────────────────── */}
-      <div className="flex flex-col gap-1">
-        {/* Controles de zoom */}
-        <div className="flex items-center justify-end gap-1">
+      {/* ── Canvas Blueprint con Zoom / Pan ─────────────────────────────────── */}
+      <div className="flex flex-col gap-1 flex-1 min-h-0">
+        {/* Barra de zoom */}
+        <div className="flex items-center justify-end gap-1 shrink-0">
           <span className="font-code-badge text-[10px] text-secondary mr-1">
             {Math.round(zoom * 100)}%
           </span>
@@ -183,7 +291,7 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
           <button
             type="button"
             onClick={handleZoomReset}
-            title="Restablecer vista"
+            title="Restablecer vista centrada"
             className="w-8 h-8 flex items-center justify-center bg-surface-container-high hover:bg-surface-variant rounded border border-[#2D3239] text-secondary hover:text-on-surface transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">fit_screen</span>
@@ -198,10 +306,12 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
           </button>
         </div>
 
-        {/* Área del mapa */}
+        {/* Área del mapa interactivo */}
         <div
           ref={containerRef}
-          className="relative w-full h-[540px] rounded overflow-hidden border border-[#2D3239] select-none"
+          className={`relative w-full rounded overflow-hidden border border-[#2D3239] select-none ${
+            isFullscreen ? 'flex-1 h-full min-h-0' : 'h-[540px]'
+          }`}
           style={{ backgroundColor: '#14161a', cursor: 'grab' }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
@@ -209,17 +319,27 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          {/* Contenido transformado */}
+          {/* Contenedor del mundo (coordenadas unificadas fijas 960x540) */}
           <div
-            className="absolute inset-0 w-full h-full"
+            className="absolute"
             style={{
+              width: `${BASE_WIDTH}px`,
+              height: `${BASE_HEIGHT}px`,
+              left: 0,
+              top: 0,
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: '0 0',
               willChange: 'transform',
             }}
           >
-            {/* SVG de fondo estructural */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+            {/* SVG estructural del plano subterráneo */}
+            <svg
+              className="absolute inset-0 pointer-events-none"
+              width={BASE_WIDTH}
+              height={BASE_HEIGHT}
+              viewBox={`0 0 ${BASE_WIDTH} ${BASE_HEIGHT}`}
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <pattern height="40" id="grid-minemap" patternUnits="userSpaceOnUse" width="40">
                   <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1d2026" strokeWidth="1" />
@@ -260,28 +380,28 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
               </g>
             </svg>
 
-            {/* ── Marcadores de nodos del nivel activo ───────────────────────── */}
+            {/* Mensaje vacío */}
             {nodosFiltrados.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="font-code-badge text-[13px] text-secondary bg-surface-container/80 px-4 py-2 rounded border border-[#2D3239]">
-                  Sin nodos en {activeLevel}
+                  Sin nodos {showAll ? 'disponibles' : `en ${activeLevel}`}
                 </span>
               </div>
             )}
 
+            {/* Marcadores de nodos sobre el plano */}
             {nodosFiltrados.map((nodo) => {
-              const nivel = nodo.evaluacion?.nivel ?? 'NORMAL';
-              const p = PALETA[nivel];
+              const nivel      = nodo.evaluacion?.nivel ?? 'NORMAL';
+              const p          = PALETA[nivel];
               const isSelected = selectedNodoId === nodo.id;
-              const tiempoMin = Math.round((Date.now() - new Date(nodo.lectura?.fecha ?? 0).getTime()) / 60000);
-              const ch4 = nodo.lectura?.ch4?.toFixed(1) ?? '--';
+              const tiempoMin  = Math.round((Date.now() - new Date(nodo.lectura?.fecha ?? 0).getTime()) / 60000);
+              const ch4        = nodo.lectura?.ch4?.toFixed(1) ?? '--';
 
               return (
                 <div
                   key={nodo.id}
                   className="absolute z-20"
                   style={nodo.mapCoords}
-                  // Detener la propagación para no iniciar drag al hacer clic en un nodo
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <button
@@ -294,27 +414,20 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
                       borderLeftWidth: '3px',
                       outline: isSelected ? `2px solid ${p.border}` : 'none',
                       outlineOffset: '2px',
-                      // Pulso de selección
-                      boxShadow: isSelected ? `0 0 0 3px ${p.border}55, 0 4px 16px ${p.border}44` : undefined,
+                      boxShadow: isSelected
+                        ? `0 0 0 3px ${p.border}55, 0 4px 16px ${p.border}44`
+                        : undefined,
                     }}
                   >
-                    {/* Encabezado: nombre + ícono */}
                     <div className="flex items-center justify-between gap-2">
-                      <span
-                        className="font-action-label text-[12px] uppercase font-semibold leading-tight"
-                        style={{ color: p.text }}
-                      >
+                      <span className="font-action-label text-[12px] uppercase font-semibold leading-tight" style={{ color: p.text }}>
                         {nodo.nombre}
                       </span>
-                      <span
-                        className="material-symbols-outlined text-[18px] shrink-0"
-                        style={{ color: p.text }}
-                      >
+                      <span className="material-symbols-outlined text-[18px] shrink-0" style={{ color: p.text }}>
                         {p.icon}
                       </span>
                     </div>
 
-                    {/* CH4 + estado */}
                     <div className="flex items-center justify-between mt-1 gap-2">
                       <span className="font-code-badge text-[12px] font-bold" style={{ color: p.text }}>
                         CH₄: {ch4}%
@@ -327,12 +440,10 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
                       </span>
                     </div>
 
-                    {/* Tiempo desde última transmisión */}
                     <div className="font-code-badge text-[10px] mt-1" style={{ color: '#6B7280' }}>
                       {tiempoMin < 60 ? `Hace ${tiempoMin} min` : 'Hace +1h'} · {nodo.nivel}
                     </div>
 
-                    {/* Sirena activa */}
                     {nodo.alarmaLocalActiva && (
                       <span className="mt-1 font-code-badge text-[9px] font-bold text-white bg-[#B2533E] px-1.5 py-0.5 rounded animate-pulse self-start">
                         SIRENA LOCAL ACTIVA
@@ -344,7 +455,7 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
             })}
           </div>
 
-          {/* ── Leyenda (fija, fuera del área transformada) ──────────────── */}
+          {/* ── Leyenda (fija, fuera del transform) ──────────────────────── */}
           <div className="absolute bottom-0 left-0 right-0 flex flex-wrap items-center justify-between px-space-md py-2 bg-surface-container-lowest border-t border-[#2D3239] z-30">
             <div className="flex items-center gap-space-md flex-wrap">
               <span className="font-code-badge text-[11px] text-secondary uppercase font-semibold">Semáforo:</span>
@@ -363,11 +474,27 @@ export function MineMap({ nodos = [], onSelectNodo, onFocusCritical, selectedNod
             </div>
           </div>
 
-          {/* Hint de navegación */}
+          {/* ── Hint de navegación ───────────────────────────────────────── */}
           <div className="absolute top-2 right-2 z-30 flex items-center gap-1 px-2 py-1 bg-surface-container-lowest/80 rounded border border-[#2D3239]">
             <span className="material-symbols-outlined text-[13px] text-secondary">pan_tool</span>
             <span className="font-code-badge text-[10px] text-secondary">Arrastra · Rueda para zoom</span>
           </div>
+
+          {/* ── Toast DXF cargado ─────────────────────────────────────────── */}
+          {dxfFileName && (
+            <div className="absolute top-2 left-2 z-30 flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-container-low border border-[#2D3239] rounded shadow">
+              <span className="material-symbols-outlined text-[15px] text-[#C29B38]">draft</span>
+              <span className="font-code-badge text-[10px] text-secondary">DXF: {dxfFileName}</span>
+              <button
+                type="button"
+                onClick={() => setDxfFileName(null)}
+                className="ml-1 text-secondary hover:text-on-surface"
+                title="Quitar"
+              >
+                <span className="material-symbols-outlined text-[14px]">close</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </section>
