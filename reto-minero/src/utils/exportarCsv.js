@@ -1,7 +1,18 @@
 /**
- * Utilidad para exportar registros de telemetría a formato CSV.
+ * Utilidad para exportar registros de telemetría y resúmenes de turno a formato CSV.
  * Incluye UTF-8 BOM (\uFEFF) para compatibilidad nativa con Microsoft Excel en Windows.
+ * Cumple con Decreto 1886 de 2015:
+ * - NO incluye campos de batería (sensores conectados a corriente eléctrica fija).
+ * - NO incluye señal wifi (solo conectividad CONECTADO vs SIN_SEÑAL).
+ * - Incluye todos los gases normativos: CH4, O2, CO, H2S, NOx, CO2.
  */
+
+import {
+  obtenerInfoTurnos,
+  calcularResumenTurno,
+  generarCsvResumenTurno,
+  descargarArchivoCsv,
+} from '../core/turnos.js';
 
 export function exportarLecturasCsv(lecturas = [], nombreArchivo = 'telemetria-minera.csv') {
   if (!lecturas || lecturas.length === 0) {
@@ -16,10 +27,14 @@ export function exportarLecturasCsv(lecturas = [], nombreArchivo = 'telemetria-m
     'Tipo de Sitio',
     'CH4 (%Vol)',
     'Limite CH4 (%Vol)',
+    'Oxigeno O2 (%Vol)',
+    'Monoxido Carbono CO (PPM)',
+    'Acido Sulfhidrico H2S (PPM)',
+    'Gases Nitrosos NOx (PPM)',
+    'Dioxido Carbono CO2 (PPM)',
     'Temperatura (°C)',
     'Humedad (%)',
-    'Bateria (%)',
-    'RSSI LoRa (dBm)',
+    'Estado Señal',
     'Estado Normativo',
   ];
 
@@ -34,6 +49,8 @@ export function exportarLecturasCsv(lecturas = [], nombreArchivo = 'telemetria-m
       ? new Date(item.fechaIso).toLocaleString('es-CO')
       : item.horaFormateada || '--';
 
+    const estadoSenal = item.alertaNivel === 'SIN_SEÑAL' ? 'SIN SEÑAL' : 'CONECTADO';
+
     return [
       escapar(fecha),
       escapar(item.nombreNodo),
@@ -42,26 +59,36 @@ export function exportarLecturasCsv(lecturas = [], nombreArchivo = 'telemetria-m
       escapar(item.tipoSitio),
       escapar(item.ch4?.toFixed(2)),
       escapar(item.limiteCh4?.toFixed(1)),
+      escapar(item.o2?.toFixed(2) ?? '20.90'),
+      escapar(item.co?.toFixed(1) ?? '2.0'),
+      escapar(item.h2s?.toFixed(2) ?? '0.05'),
+      escapar(item.nox?.toFixed(2) ?? '0.02'),
+      escapar(item.co2 ?? 450),
       escapar(item.temperatura?.toFixed(1)),
       escapar(item.humedad),
-      escapar(item.bateria),
-      escapar(item.rssi),
+      escapar(estadoSenal),
       escapar(item.alertaNivel),
-    ].join(';'); // Separador punto y coma estándar para Excel en español
+    ].join(';');
   });
 
   const contenido = '\uFEFF' + [encabezados.join(';'), ...filas].join('\r\n');
-  const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', nombreArchivo);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-
-  return true;
+  return descargarArchivoCsv(contenido, nombreArchivo);
 }
 
+/**
+ * Genera y descarga el resumen completo del turno indicado (o del turno actual).
+ * @param {Array<Object>} historial - Lista de mediciones
+ * @param {Object} [turnoEspecifico] - Información de turno opcional
+ */
+export function exportarResumenTurno(historial = [], turnoEspecifico = null) {
+  const { turnoActual } = obtenerInfoTurnos();
+  const turno = turnoEspecifico || turnoActual;
+
+  const resumen = calcularResumenTurno(historial, turno);
+  const csvContenido = generarCsvResumenTurno(resumen);
+
+  const fechaIso = new Date().toISOString().split('T')[0];
+  const nombreArchivo = `resumen-turno-${turno.id}_${fechaIso}.csv`;
+
+  return descargarArchivoCsv(csvContenido, nombreArchivo);
+}

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAlertasContext } from '../context/AlertasContext.jsx';
 import { useMina } from '../hooks/useMina.js';
+import { trabajadoresRepo } from '../data/repositorio.js';
 
 /**
  * Modal unificado de gestión de alarmas del tablero.
@@ -22,6 +23,24 @@ export function AlarmModal() {
 
   const { configMina } = useMina();
   const supervisor = configMina?.operador || 'Supervisor de turno';
+
+  const [personalSector, setPersonalSector] = useState([]);
+
+  useEffect(() => {
+    if (!alertaModal?.nodoId) return undefined;
+    let activo = true;
+    trabajadoresRepo.listarPorSector(alertaModal.nodoId)
+      .then((lista) => {
+        if (activo) setPersonalSector(lista);
+      })
+      .catch(() => {
+        if (activo) setPersonalSector([]);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [alertaModal?.nodoId]);
 
   // ── 1. Modal de Confirmación de Evacuación General (SOS desde Sidebar) ──────
   if (isConfirmEvacuacionOpen) {
@@ -146,6 +165,31 @@ export function AlarmModal() {
             </p>
           </div>
 
+          {/* Personal en el sector para rescate/evacuación */}
+          {personalSector.length > 0 && (
+            <div className="p-4 bg-black/60 rounded-lg border border-[#8B3232]">
+              <span className="font-code-badge text-[12px] text-[#FFA5A5] uppercase font-bold flex items-center gap-1.5 mb-2">
+                <span className="material-symbols-outlined text-[16px]">groups</span>
+                Personal Asignado en este Sector (Fichas de Emergencia SOS):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {personalSector.map((p) => (
+                  <div key={p.id} className="p-2.5 rounded bg-[#3B1212] border border-[#8B3232] flex items-center justify-between">
+                    <div>
+                      <p className="font-action-label text-[13px] font-bold text-white leading-tight">{p.nombre}</p>
+                      <p className="font-code-badge text-[11px] text-[#FFA5A5]">{p.rol}</p>
+                      <p className="font-code-badge text-[10px] text-gray-300">SOS: {p.contactoEmergencia?.nombre} ({p.contactoEmergencia?.telefono})</p>
+                    </div>
+                    <div className="px-2 py-1 rounded bg-[#8B3232] text-white text-center font-bold font-headline-md text-[13px] shrink-0">
+                      <span className="text-[9px] block text-[#FFA5A5]">RH</span>
+                      {p.fichaMedica?.tipoSangre}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* AVISO MANDATORIO: Sirena local sigue activa */}
           <div className="p-4 bg-[#8B3232]/40 rounded-lg border border-dashed border-[#FFA5A5] flex items-start gap-3">
             <span className="material-symbols-outlined text-[26px] text-[#FFA5A5] shrink-0 mt-0.5">
@@ -237,6 +281,31 @@ export function AlarmModal() {
             {alertaModal.accion}
           </p>
         </div>
+
+        {/* Personal en el sector */}
+        {personalSector.length > 0 && (
+          <div className="p-3 rounded bg-surface-container-lowest border border-[#2D3239]">
+            <span className="font-code-badge text-[11px] text-[#D87661] uppercase font-bold flex items-center gap-1.5 mb-1.5">
+              <span className="material-symbols-outlined text-[15px]">badge</span>
+              Personal en este sector (Ficha de Emergencia):
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {personalSector.map((p) => (
+                <div key={p.id} className="flex items-center justify-between text-[12px] p-2 rounded bg-surface-container border border-[#2D3239]">
+                  <div>
+                    <span className="font-semibold text-on-surface">{p.nombre}</span>
+                    <span className="text-secondary text-[11px] block">{p.rol}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-[#5C2222] text-white font-bold text-[11px] border border-[#8B3232]">
+                      RH {p.fichaMedica?.tipoSangre}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* AVISO MANDATORIO: Sirena local del nodo sigue activa */}
         <div className="p-3 rounded bg-[#2E1A17] border border-[#B2533E]/50 flex items-start gap-2.5">

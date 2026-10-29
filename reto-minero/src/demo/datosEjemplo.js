@@ -1,7 +1,8 @@
 /**
- * Datos fijos de 6 nodos sensores con el modelo definido en la skill:
- * { id, nombre, ubicacion, tipoSitio, nivel, mapCoords, lectura: { ch4, temperatura, humedad, bateria, rssi, fecha }, alarmaLocalActiva }
- * Las fechas son relativas a "ahora" para que siempre se vean recientes.
+ * Datos fijos de 6 nodos sensores según Decreto 1886 de 2015.
+ * REGLA: Los sensores están permanentemente conectados a la red eléctrica (NO usan batería).
+ * La conectividad se evalúa por presencia de señal (CONECTADO vs SIN_SEÑAL).
+ * Cada nodo incluye mediciones multigas: CH4, O2, CO, H2S, NOx, CO2, Temperatura y Humedad.
  */
 
 export function obtenerNodosEjemplo(ahora = new Date()) {
@@ -17,17 +18,20 @@ export function obtenerNodosEjemplo(ahora = new Date()) {
       nivel: 'N-2',
       mapCoords: {
         right: '1.5rem',
-        top: '7rem'
+        top: '7rem',
       },
       lectura: {
         ch4: 0.7,
+        o2: 20.4,
+        co: 6,
+        h2s: 0.15,
+        nox: 0.04,
+        co2: 680,
         temperatura: 26.5,
         humedad: 78,
-        bateria: 85,
-        rssi: -68,
-        fecha: new Date(t - 1 * 60 * 1000).toISOString() // hace 1 min
+        fecha: new Date(t - 1 * 60 * 1000).toISOString(), // hace 1 min
       },
-      alarmaLocalActiva: false
+      alarmaLocalActiva: false,
     },
 
     // 2. Retorno de tajo (N-2): CH4 1.2% -> PRECAUCION (su límite es 1.5%, 1.2 >= 0.75 y < 1.5)
@@ -39,17 +43,20 @@ export function obtenerNodosEjemplo(ahora = new Date()) {
       nivel: 'N-2',
       mapCoords: {
         right: '6rem',
-        top: '12rem'
+        top: '12rem',
       },
       lectura: {
         ch4: 1.2,
+        o2: 20.1,
+        co: 9,
+        h2s: 0.25,
+        nox: 0.06,
+        co2: 950,
         temperatura: 27.2,
         humedad: 82,
-        bateria: 92,
-        rssi: -72,
-        fecha: new Date(t - 2 * 60 * 1000).toISOString() // hace 2 min
+        fecha: new Date(t - 2 * 60 * 1000).toISOString(), // hace 2 min
       },
-      alarmaLocalActiva: false
+      alarmaLocalActiva: false,
     },
 
     // 3. Retorno principal (N-2): CH4 1.1% -> ALARMA, alarma local activa (límite 1.0%, 1.1 >= 1.0)
@@ -61,17 +68,20 @@ export function obtenerNodosEjemplo(ahora = new Date()) {
       nivel: 'N-2',
       mapCoords: {
         right: '3rem',
-        bottom: '5rem'
+        bottom: '5rem',
       },
       lectura: {
         ch4: 1.1,
+        o2: 19.9,
+        co: 14,
+        h2s: 0.35,
+        nox: 0.08,
+        co2: 1250,
         temperatura: 28.0,
         humedad: 84,
-        bateria: 79,
-        rssi: -65,
-        fecha: new Date(t - 1 * 60 * 1000).toISOString() // hace 1 min
+        fecha: new Date(t - 1 * 60 * 1000).toISOString(), // hace 1 min
       },
-      alarmaLocalActiva: true
+      alarmaLocalActiva: true,
     },
 
     // 4. Frente de avance (N-3): sin transmitir hace 12 min -> SIN_SEÑAL (límite: 5 min)
@@ -83,17 +93,20 @@ export function obtenerNodosEjemplo(ahora = new Date()) {
       nivel: 'N-3',
       mapCoords: {
         left: '2.5rem',
-        bottom: '4rem'
+        bottom: '4rem',
       },
       lectura: {
         ch4: 0.2,
+        o2: 20.9,
+        co: 2,
+        h2s: 0.05,
+        nox: 0.02,
+        co2: 450,
         temperatura: 24.1,
         humedad: 70,
-        bateria: 64,
-        rssi: -88,
-        fecha: new Date(t - 12 * 60 * 1000).toISOString() // hace 12 min
+        fecha: new Date(t - 12 * 60 * 1000).toISOString(), // hace 12 min (sin señal)
       },
-      alarmaLocalActiva: false
+      alarmaLocalActiva: false,
     },
 
     // 5. Retorno de preparación (N-1): CH4 0.3% -> NORMAL (límite 1.5%, 0.3 < 0.75)
@@ -105,17 +118,20 @@ export function obtenerNodosEjemplo(ahora = new Date()) {
       nivel: 'N-1',
       mapCoords: {
         left: '33%',
-        top: '3.5rem'
+        top: '3.5rem',
       },
       lectura: {
         ch4: 0.3,
+        o2: 20.8,
+        co: 3,
+        h2s: 0.08,
+        nox: 0.03,
+        co2: 520,
         temperatura: 23.5,
         humedad: 68,
-        bateria: 95,
-        rssi: -62,
-        fecha: new Date(t - 3 * 60 * 1000).toISOString() // hace 3 min
+        fecha: new Date(t - 3 * 60 * 1000).toISOString(), // hace 3 min
       },
-      alarmaLocalActiva: false
+      alarmaLocalActiva: false,
     },
 
     // 6. Frente de explotación 2 (N-1): CH4 0.2% -> NORMAL (límite 1.0%, 0.2 < 0.5)
@@ -127,18 +143,21 @@ export function obtenerNodosEjemplo(ahora = new Date()) {
       nivel: 'N-1',
       mapCoords: {
         left: '36%',
-        bottom: '3.5rem'
+        bottom: '3.5rem',
       },
       lectura: {
         ch4: 0.2,
+        o2: 20.9,
+        co: 2,
+        h2s: 0.04,
+        nox: 0.01,
+        co2: 430,
         temperatura: 22.8,
         humedad: 65,
-        bateria: 90,
-        rssi: -60,
-        fecha: new Date(t - 2 * 60 * 1000).toISOString() // hace 2 min
+        fecha: new Date(t - 2 * 60 * 1000).toISOString(), // hace 2 min
       },
-      alarmaLocalActiva: false
-    }
+      alarmaLocalActiva: false,
+    },
   ];
 }
 

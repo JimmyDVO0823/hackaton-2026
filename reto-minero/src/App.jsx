@@ -2,9 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { MainLayout } from './layout/MainLayout';
 import { TableroPage } from './pages/TableroPage';
 import { HistorialPage } from './pages/HistorialPage';
+import { PersonalPage } from './pages/PersonalPage';
 import { AlarmModal } from './components/AlarmModal';
-import { ToastProvider } from './components/Toast.jsx';
+import { ToastProvider, useToast } from './components/Toast.jsx';
 import { AlertasProvider, useAlertasContext } from './context/AlertasContext.jsx';
+import { useTurnoAutomatico } from './hooks/useTurnoAutomatico.js';
 
 function AppContent() {
   const {
@@ -14,6 +16,15 @@ function AppContent() {
     abrirModalAlerta,
     alertas,
   } = useAlertasContext();
+
+  const { mostrarToast } = useToast();
+
+  // Gestión de turnos de 8h y descarga automática de resumen CSV
+  const {
+    turnoActual,
+    descargarTurnoActual,
+    simularFinDeTurno,
+  } = useTurnoAutomatico((msg, tipo) => mostrarToast(msg, tipo));
 
   const [activeRoute, setActiveRoute] = useState('tablero');
   const [historialNodoId, setHistorialNodoId] = useState(null);
@@ -69,8 +80,7 @@ function AppContent() {
     activeRoute,
     onNavigate: (route) => {
       if (route === 'historial') {
-        // Al entrar directo desde el menú, mostrar todos los nodos
-        setHistorialNodoId('TODOS');
+        setHistorialNodoId(null);
       }
       setActiveRoute(route);
     },
@@ -79,6 +89,12 @@ function AppContent() {
     onToggleBocina: handleToggleBocinaSidebar,
     audioHabilitado,
     onHabilitarAudio: habilitarAudio,
+  };
+
+  const turnoProps = {
+    turnoActual,
+    descargarTurnoActual,
+    simularFinDeTurno,
   };
 
   // Pantalla activa
@@ -100,6 +116,14 @@ function AppContent() {
       return (
         <HistorialPage
           initialNodoId={historialNodoId}
+          onVolverTablero={() => setActiveRoute('tablero')}
+        />
+      );
+    }
+
+    if (activeRoute === 'personal') {
+      return (
+        <PersonalPage
           onVolverTablero={() => setActiveRoute('tablero')}
         />
       );
@@ -129,7 +153,7 @@ function AppContent() {
 
   return (
     <>
-      <MainLayout sidebarProps={sidebarProps}>
+      <MainLayout sidebarProps={sidebarProps} turnoProps={turnoProps}>
         {renderContent()}
       </MainLayout>
 

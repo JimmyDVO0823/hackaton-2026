@@ -3,7 +3,8 @@
  * REGLAS:
  * - Determinista: SIN Math.random().
  * - Una lectura cada 10 minutos (144 intervalos por nodo).
- * - Variación suave y coherente con la lectura actual.
+ * - Mediciones multigas completas: CH4, O2, CO, H2S, NOx, CO2, Temperatura y Humedad.
+ * - Los sensores están conectados permanentemente a la red eléctrica (SIN batería).
  * - Retorno Principal N-2: CH4 sube de 0,4% a 1,1% en las últimas 2 h (ALARMA).
  * - Frente de Avance N-3: subida a 0,9% entre las 03:00 y las 04:30 y bajada tras ventilar.
  * - Nodo SIN_SEÑAL (Frente de Avance): deja de tener lecturas desde su última transmisión (hace 12 min).
@@ -21,6 +22,11 @@ export const NODOS_METADATA = [
     limite: 1.0,
     baseTemp: 28.0,
     baseHum: 84,
+    baseO2: 20.0,
+    baseCo: 12,
+    baseH2s: 0.30,
+    baseNox: 0.07,
+    baseCo2: 1200,
   },
   {
     id: 'frente-explotacion-1',
@@ -31,6 +37,11 @@ export const NODOS_METADATA = [
     limite: 1.0,
     baseTemp: 26.5,
     baseHum: 78,
+    baseO2: 20.4,
+    baseCo: 6,
+    baseH2s: 0.15,
+    baseNox: 0.04,
+    baseCo2: 680,
   },
   {
     id: 'retorno-tajo',
@@ -41,6 +52,11 @@ export const NODOS_METADATA = [
     limite: 1.5,
     baseTemp: 27.2,
     baseHum: 82,
+    baseO2: 20.1,
+    baseCo: 9,
+    baseH2s: 0.25,
+    baseNox: 0.05,
+    baseCo2: 950,
   },
   {
     id: 'frente-avance',
@@ -51,6 +67,11 @@ export const NODOS_METADATA = [
     limite: 1.0,
     baseTemp: 24.1,
     baseHum: 70,
+    baseO2: 20.8,
+    baseCo: 4,
+    baseH2s: 0.08,
+    baseNox: 0.03,
+    baseCo2: 480,
   },
   {
     id: 'retorno-preparacion',
@@ -61,6 +82,11 @@ export const NODOS_METADATA = [
     limite: 1.5,
     baseTemp: 23.5,
     baseHum: 68,
+    baseO2: 20.8,
+    baseCo: 3,
+    baseH2s: 0.08,
+    baseNox: 0.02,
+    baseCo2: 520,
   },
   {
     id: 'frente-explotacion-2',
@@ -71,6 +97,11 @@ export const NODOS_METADATA = [
     limite: 1.0,
     baseTemp: 22.8,
     baseHum: 65,
+    baseO2: 20.9,
+    baseCo: 2,
+    baseH2s: 0.04,
+    baseNox: 0.01,
+    baseCo2: 430,
   },
 ];
 
@@ -91,7 +122,6 @@ function calcularCh4Determinista(nodoId, timestamp, minutosAtras) {
         const val = 0.40 + 0.70 * curva + ondulacion;
         return Number(Math.min(1.10, Math.max(0.40, val)).toFixed(2));
       }
-      // Antes de las últimas 2 h: estable entre 0.38% y 0.42%
       const osc = 0.02 * Math.sin(minutosAtras * 0.08) + 0.01 * Math.cos(minutosAtras * 0.03);
       return Number((0.40 + osc).toFixed(2));
     }
@@ -99,13 +129,11 @@ function calcularCh4Determinista(nodoId, timestamp, minutosAtras) {
     case 'frente-avance': {
       // Evento: subida a 0,9% entre las 03:00 y las 04:30 y bajada tras ventilar
       if (horaDecimal >= 3.0 && horaDecimal <= 4.5) {
-        // Pico a las 03:45 (3.75)
-        const distPico = Math.abs(horaDecimal - 3.75) / 0.75; // 0 en el centro, 1 en los extremos
+        const distPico = Math.abs(horaDecimal - 3.75) / 0.75;
         const factorCampana = Math.cos(distPico * (Math.PI / 2));
         const val = 0.20 + 0.70 * Math.max(0, factorCampana);
         return Number(val.toFixed(2));
       }
-      // Línea base suave en ~0.2%
       const osc = 0.02 * Math.sin(minutosAtras * 0.05);
       return Number((0.20 + osc).toFixed(2));
     }
@@ -123,14 +151,12 @@ function calcularCh4Determinista(nodoId, timestamp, minutosAtras) {
     }
 
     case 'retorno-preparacion': {
-      // Normal ~0.3%
       const osc = 0.02 * Math.sin(minutosAtras * 0.07);
       return Number((0.30 + osc).toFixed(2));
     }
 
     case 'frente-explotacion-2':
     default: {
-      // Normal ~0.2%
       const osc = 0.02 * Math.cos(minutosAtras * 0.09);
       return Number((0.20 + osc).toFixed(2));
     }
@@ -169,8 +195,14 @@ export function generarHistorial24h(fechaReferencia = new Date()) {
 
       const temperatura = Number((meta.baseTemp + variacionTemp).toFixed(1));
       const humedad = Math.round(meta.baseHum + variacionHum);
-      const bateria = Math.max(30, Math.min(100, Math.round(85 - paso * 0.05)));
-      const rssi = meta.id === 'frente-avance' ? -88 : Math.round(-65 + 3 * Math.sin(paso * 0.2));
+
+      // Variación determinista para los otros gases (correlacionados con ventilación y CH4)
+      const factorDesplazamiento = ch4 * 0.35; // A mayor metano, menor oxígeno libre
+      const o2 = Number((meta.baseO2 - factorDesplazamiento + 0.1 * Math.sin(paso * 0.08)).toFixed(2));
+      const co = Number((meta.baseCo + (ch4 > 0.8 ? 5 : 0) + 0.8 * Math.cos(paso * 0.05)).toFixed(1));
+      const h2s = Number((meta.baseH2s + 0.03 * Math.sin(paso * 0.1)).toFixed(2));
+      const nox = Number((meta.baseNox + 0.01 * Math.cos(paso * 0.07)).toFixed(2));
+      const co2 = Math.round(meta.baseCo2 + ch4 * 200 + 40 * Math.sin(paso * 0.04));
 
       const d = new Date(t);
       const fechaIso = d.toISOString();
@@ -202,10 +234,13 @@ export function generarHistorial24h(fechaReferencia = new Date()) {
         fechaIso,
         horaFormateada,
         ch4,
+        o2,
+        co,
+        h2s,
+        nox,
+        co2,
         temperatura,
         humedad,
-        bateria,
-        rssi,
         alertaNivel: evaluacion.nivel,
       });
     }

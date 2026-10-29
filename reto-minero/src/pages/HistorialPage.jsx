@@ -14,16 +14,18 @@ import {
   generarHistorial24h,
   NODOS_METADATA,
 } from '../demo/historialEjemplo.js';
-import { exportarLecturasCsv } from '../utils/exportarCsv.js';
+import { exportarLecturasCsv, exportarResumenTurno } from '../utils/exportarCsv.js';
+import { obtenerInfoTurnos } from '../core/turnos.js';
 import { useToast } from '../components/Toast.jsx';
 
 /**
- * Pantalla de Historial con Gráfico de Tendencias y Tabla de Auditoría.
- * Cumple con los requisitos de la Fase 5:
- * - Filtros por nodo, nivel de mina, variable (CH4, temp, hum) y rango temporal (6h, 12h, 24h).
- * - Gráfico con línea punteada en el límite legal y franja sombreada de precaución (50% a 100%).
- * - Tabla con chip de alerta y paginación ergonómica.
- * - Botón "Exportar CSV".
+ * Pantalla de Historial con Gráfico de Tendencias Multigas y Tabla de Auditoría.
+ * Cumple con Decreto 1886 de 2015:
+ * - Gráfico de gases: Metano (CH4), Oxígeno (O2), Monóxido de Carbono (CO), Ácido Sulfhídrico (H2S),
+ *   Gases Nitrosos (NOx/NO2), Dióxido de Carbono (CO2), además de Temperatura y Humedad.
+ * - Límites normativos visuales (línea discontinua legal y franja sombreada de precaución).
+ * - Entrega de "Resumen de Turno" (cada 8 horas) en CSV para auditoría legal.
+ * - SIN BATERÍAS NI SEÑAL WIFI (sensores a red eléctrica fija 24/7).
  */
 export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
   const { mostrarToast } = useToast();
@@ -32,70 +34,63 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
   // Generar datos deterministas de 24 horas
   const todoHistorial = useMemo(() => generarHistorial24h(ahora), [ahora]);
 
+  // Turno actual
+  const infoTurnos = useMemo(() => obtenerInfoTurnos(ahora), [ahora]);
+
   // ── Filtros de estado ───────────────────────────────────────────────────────
-  const [filtroNodo, setFiltroNodo]         = useState(initialNodoId || 'TODOS');
-  const [filtroNivel, setFiltroNivel]       = useState('TODOS');
-  const [filtroVariable, setFiltroVariable] = useState('ch4'); // 'ch4' | 'temperatura' | 'humedad'
-  const [filtroRango, setFiltroRango]       = useState(24);   // 6 | 12 | 24 horas
+  const nodoInicialValido = (initialNodoId && initialNodoId !== 'TODOS')
+    ? initialNodoId
+    : NODOS_METADATA[0].id;
+  const [filtroNodo, setFiltroNodo]         = useState(nodoInicialValido);
+  const [filtroVariable, setFiltroVariable] = useState('ch4'); // ch4, o2, co, h2s, nox, co2, temperatura, humedad
+  const [filtroRango, setFiltroRango]       = useState(24);   // 8 (turno) | 6 | 12 | 24 horas
   const [paginaActual, setPaginaActual]     = useState(1);
   const elementosPorPagina = 12;
 
   // ── Filtrado en memoria ─────────────────────────────────────────────────────
   const lecturasFiltradas = useMemo(() => {
-    const limiteMinutos = filtroRango * 60;
+    const finMinutos = filtroRango * 60;
+
+    // Si es filtro por turno actual
+    if (filtroRango === 'turno_actual') {
+      const { inicioTimestamp, finTimestamp } = infoTurnos.turnoActual;
+      return todoHistorial.filter((item) => {
+        if (item.timestamp < inicioTimestamp || item.timestamp > finTimestamp) return false;
+        return item.nodoId === filtroNodo;
+      });
+    }
 
     return todoHistorial.filter((item) => {
-      // Filtro por rango
-      if (item.minutosAtras > limiteMinutos) return false;
-      // Filtro por nodo
-      if (filtroNodo !== 'TODOS' && item.nodoId !== filtroNodo) return false;
-      // Filtro por nivel de mina
-      if (filtroNivel !== 'TODOS' && item.nivelMina !== filtroNivel) return false;
-      return true;
+      if (item.minutosAtras > finMinutos) return false;
+      return item.nodoId === filtroNodo;
     });
-  }, [todoHistorial, filtroRango, filtroNodo, filtroNivel]);
+  }, [todoHistorial, filtroRango, filtroNodo, infoTurnos]);
 
   // Nodo seleccionado actual para obtener metadatos específicos (límite, etc.)
   const nodoMetaActual = useMemo(() => {
-    if (filtroNodo === 'TODOS') return null;
-    return NODOS_METADATA.find((n) => n.id === filtroNodo) || null;
+    return NODOS_METADATA.find((n) => n.id === filtroNodo) || NODOS_METADATA[0];
   }, [filtroNodo]);
 
   const limiteSitio = nodoMetaActual?.limite ?? 1.0;
 
   // ── Preparar datos para el gráfico de Recharts ──────────────────────────────
   const datosGrafico = useMemo(() => {
-    // Si hay un nodo específico seleccionado, graficar sus lecturas ordenadas
-    if (filtroNodo !== 'TODOS') {
-      return lecturasFiltradas.map((r) => ({
-        hora: r.horaFormateada,
-        valor: r[filtroVariable],
-        ch4: r.ch4,
-        temperatura: r.temperatura,
-        humedad: r.humedad,
-        nodo: r.nombreNodo,
-      }));
-    }
-
-    // Si "TODOS" está seleccionado, agrupar por hora promedio para ver la tendencia global
-    const mapaPorHora = new Map();
-    for (const r of lecturasFiltradas) {
-      if (!mapaPorHora.has(r.horaFormateada)) {
-        mapaPorHora.set(r.horaFormateada, { suma: 0, count: 0, hora: r.horaFormateada });
-      }
-      const entry = mapaPorHora.get(r.horaFormateada);
-      entry.suma += r[filtroVariable];
-      entry.count += 1;
-    }
-
-    return Array.from(mapaPorHora.values()).map((e) => ({
-      hora: e.hora,
-      valor: Number((e.suma / e.count).toFixed(2)),
+    return lecturasFiltradas.map((r) => ({
+      hora: r.horaFormateada,
+      valor: r[filtroVariable],
+      ch4: r.ch4,
+      o2: r.o2,
+      co: r.co,
+      h2s: r.h2s,
+      nox: r.nox,
+      co2: r.co2,
+      temperatura: r.temperatura,
+      humedad: r.humedad,
+      nodo: r.nombreNodo,
     }));
-  }, [lecturasFiltradas, filtroNodo, filtroVariable]);
+  }, [lecturasFiltradas, filtroVariable]);
 
   // ── Paginación de la tabla ──────────────────────────────────────────────────
-  // Tabla en orden descendente (más recientes primero)
   const lecturasDescendentes = useMemo(() => {
     return [...lecturasFiltradas].sort((a, b) => b.timestamp - a.timestamp);
   }, [lecturasFiltradas]);
@@ -114,7 +109,14 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
     }
   };
 
-  // Configuración de la variable seleccionada
+  const handleDescargarResumenTurno = () => {
+    const ok = exportarResumenTurno(todoHistorial, infoTurnos.turnoActual);
+    if (ok) {
+      mostrarToast(`Resumen oficial de ${infoTurnos.turnoActual.nombre} descargado exitosamente`, 'success');
+    }
+  };
+
+  // Configuración de cada variable y sus límites normativos (Decreto 1886)
   const configVar = {
     ch4: {
       nombre: 'Metano (CH₄)',
@@ -123,24 +125,98 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
       stroke: '#EAB308',
       min: 0,
       max: 2.0,
+      limite: limiteSitio,
+      articulo: 'Art. 53',
+      precaucionMin: limiteSitio * 0.5,
+      precaucionMax: limiteSitio,
+      tipo: 'ch4',
+    },
+    o2: {
+      nombre: 'Oxígeno (O₂)',
+      unidad: '%Vol',
+      color: '#06B6D4',
+      stroke: '#06B6D4',
+      min: 18.0,
+      max: 24.0,
+      limiteMin: 19.5,
+      limiteMax: 23.5,
+      articulo: 'Art. 38 (Rango apto: 19.5% - 23.5%)',
+      tipo: 'rango',
+    },
+    co: {
+      nombre: 'Monóxido de Carbono (CO)',
+      unidad: 'PPM',
+      color: '#F59E0B',
+      stroke: '#F59E0B',
+      min: 0,
+      max: 35,
+      limite: 25,
+      articulo: 'Art. 39 (TWA 25 PPM)',
+      precaucionMin: 12.5,
+      precaucionMax: 25,
+      tipo: 'limite_superior',
+    },
+    h2s: {
+      nombre: 'Ácido Sulfhídrico (H₂S)',
+      unidad: 'PPM',
+      color: '#A855F7',
+      stroke: '#A855F7',
+      min: 0,
+      max: 2.0,
+      limite: 1.0,
+      articulo: 'Art. 39 (TWA 1 PPM)',
+      precaucionMin: 0.5,
+      precaucionMax: 1.0,
+      tipo: 'limite_superior',
+    },
+    nox: {
+      nombre: 'Gases Nitrosos (NO/NO₂)',
+      unidad: 'PPM',
+      color: '#EC4899',
+      stroke: '#EC4899',
+      min: 0,
+      max: 0.40,
+      limite: 0.20,
+      articulo: 'Art. 39 (NO₂ TWA 0.2 PPM)',
+      precaucionMin: 0.10,
+      precaucionMax: 0.20,
+      tipo: 'limite_superior',
+    },
+    co2: {
+      nombre: 'Dióxido de Carbono (CO₂)',
+      unidad: 'PPM',
+      color: '#10B981',
+      stroke: '#10B981',
+      min: 300,
+      max: 6000,
+      limite: 5000,
+      articulo: 'Art. 39 (TWA 5000 PPM)',
+      precaucionMin: 2500,
+      precaucionMax: 5000,
+      tipo: 'limite_superior',
     },
     temperatura: {
       nombre: 'Temperatura',
       unidad: '°C',
       color: '#E07A5F',
       stroke: '#F97316',
-      min: 20,
-      max: 35,
+      min: 18,
+      max: 36,
+      limite: 32,
+      articulo: 'Por validar (Máx 32°C)',
+      tipo: 'limite_superior',
     },
     humedad: {
       nombre: 'Humedad Relativa',
       unidad: '%',
       color: '#3B82F6',
       stroke: '#60A5FA',
-      min: 50,
+      min: 40,
       max: 100,
+      articulo: 'Informativa',
+      tipo: 'informativa',
     },
-  }[filtroVariable];
+  }[filtroVariable] || {};
 
   return (
     <div className="flex flex-col w-full p-space-md gap-space-md bg-surface text-on-surface">
@@ -151,16 +227,24 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
             <span className="material-symbols-outlined text-[#C29B38] text-[24px]">history</span>
           </div>
           <div className="flex flex-col">
-            <h1 className="font-headline-md text-[20px] font-bold text-on-surface uppercase leading-tight">
-              Historial y Tendencias de Telemetría
-            </h1>
-            <span className="font-code-badge text-[12px] text-secondary">
-              Muestreo cada 10 min · Datos deterministas de 24 h · Decreto 1886 de 2015
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="font-headline-md text-[20px] font-bold text-on-surface uppercase leading-tight">
+                Historial y Tendencias de Telemetría Multigas
+              </h1>
+              {/* Badge del turno actual */}
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-surface-container-highest border border-[#2D3239] font-code-badge text-[11px] text-[#C29B38]">
+                <span className="material-symbols-outlined text-[14px]">schedule</span>
+                <span>{infoTurnos.turnoActual.nombre} ({infoTurnos.turnoActual.horarioTexto})</span>
+                <span className="text-secondary">· Restan {infoTurnos.turnoActual.tiempoRestanteTexto}</span>
+              </div>
+            </div>
+            <span className="font-code-badge text-[12px] text-secondary mt-0.5">
+              Monitoreo continuo 24 h · Muestreo cada 10 min · Decreto 1886 de 2015
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {onVolverTablero && (
             <button
               type="button"
@@ -172,6 +256,18 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
             </button>
           )}
 
+          {/* Botón Resumen de Turno (CSV) */}
+          <button
+            type="button"
+            onClick={handleDescargarResumenTurno}
+            title="Descargar documento resumen del turno actual de 8 horas"
+            className="min-h-[42px] px-4 rounded bg-[#C29B38]/20 hover:bg-[#C29B38]/30 text-[#E0B853] border border-[#C29B38]/60 flex items-center gap-2 font-action-label text-[13px] uppercase font-bold transition-all shadow-sm active:scale-98"
+          >
+            <span className="material-symbols-outlined text-[18px]">assignment</span>
+            <span>Resumen Turno (CSV)</span>
+          </button>
+
+          {/* Botón Exportar CSV Filtro */}
           <button
             type="button"
             onClick={handleExportarCsv}
@@ -186,7 +282,7 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
       {/* ── Barra de Filtros Interactivos ─────────────────────────────────── */}
       <section
         aria-label="Filtros de telemetría"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-surface-container-low p-3.5 rounded-lg border border-[#2D3239]"
+        className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-surface-container-low p-3.5 rounded-lg border border-[#2D3239]"
       >
         {/* 1. Selector de Nodo */}
         <div className="flex flex-col gap-1">
@@ -202,7 +298,6 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
             }}
             className="w-full min-h-[42px] bg-surface-container-lowest px-3 py-1.5 rounded text-on-surface font-body-md text-[13px] border border-[#2D3239] focus:outline-none focus:border-[#C29B38]"
           >
-            <option value="TODOS">Todos los nodos ({NODOS_METADATA.length})</option>
             {NODOS_METADATA.map((n) => (
               <option key={n.id} value={n.id}>
                 {n.nombre} ({n.nivel})
@@ -211,31 +306,10 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
           </select>
         </div>
 
-        {/* 2. Selector de Nivel de Mina */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="filtro-nivel" className="font-code-badge text-[11px] text-secondary uppercase font-semibold">
-            Nivel de Mina:
-          </label>
-          <select
-            id="filtro-nivel"
-            value={filtroNivel}
-            onChange={(e) => {
-              setFiltroNivel(e.target.value);
-              setPaginaActual(1);
-            }}
-            className="w-full min-h-[42px] bg-surface-container-lowest px-3 py-1.5 rounded text-on-surface font-body-md text-[13px] border border-[#2D3239] focus:outline-none focus:border-[#C29B38]"
-          >
-            <option value="TODOS">Todos los niveles</option>
-            <option value="N-1">Nivel 1 (-310 m)</option>
-            <option value="N-2">Nivel 2 (-420 m)</option>
-            <option value="N-3">Nivel 3 (-540 m)</option>
-          </select>
-        </div>
-
-        {/* 3. Selector de Variable */}
+        {/* 2. Selector de Variable / Gas */}
         <div className="flex flex-col gap-1">
           <label htmlFor="filtro-variable" className="font-code-badge text-[11px] text-secondary uppercase font-semibold">
-            Variable Ambiental:
+            Gas o Variable Ambiental:
           </label>
           <select
             id="filtro-variable"
@@ -243,18 +317,42 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
             onChange={(e) => setFiltroVariable(e.target.value)}
             className="w-full min-h-[42px] bg-surface-container-lowest px-3 py-1.5 rounded text-on-surface font-body-md text-[13px] border border-[#2D3239] focus:outline-none focus:border-[#C29B38]"
           >
-            <option value="ch4">Metano — CH₄ (%Vol)</option>
-            <option value="temperatura">Temperatura (°C)</option>
-            <option value="humedad">Humedad Relativa (%)</option>
+            <optgroup label="Atmósfera Minera (Decreto 1886)">
+              <option value="ch4">Metano — CH₄ (%Vol)</option>
+              <option value="o2">Oxígeno — O₂ (%Vol)</option>
+              <option value="co">Monóxido de Carbono — CO (PPM)</option>
+              <option value="h2s">Ácido Sulfhídrico — H₂S (PPM)</option>
+              <option value="nox">Gases Nitrosos — NO/NO₂ (PPM)</option>
+              <option value="co2">Dióxido de Carbono — CO₂ (PPM)</option>
+            </optgroup>
+            <optgroup label="Parámetros Físicos">
+              <option value="temperatura">Temperatura (°C)</option>
+              <option value="humedad">Humedad Relativa (%)</option>
+            </optgroup>
           </select>
         </div>
 
-        {/* 4. Selector de Rango Temporal */}
+        {/* 4. Selector de Rango Temporal / Turno */}
         <div className="flex flex-col gap-1">
           <span className="font-code-badge text-[11px] text-secondary uppercase font-semibold">
-            Rango Temporal:
+            Ventana Temporal:
           </span>
           <div className="flex items-center bg-surface-container-lowest p-1 rounded border border-[#2D3239] gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroRango('turno_actual');
+                setPaginaActual(1);
+              }}
+              title="Filtrar por las 8 horas del turno actual"
+              className={`flex-1 min-h-[34px] rounded font-code-badge text-[11px] font-bold uppercase transition-colors px-1 text-center ${
+                filtroRango === 'turno_actual'
+                  ? 'bg-surface-container-high text-on-surface border border-[#2D3239]'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              Turno (8h)
+            </button>
             {[6, 12, 24].map((rango) => (
               <button
                 key={rango}
@@ -263,20 +361,20 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                   setFiltroRango(rango);
                   setPaginaActual(1);
                 }}
-                className={`flex-1 min-h-[34px] rounded font-code-badge text-[12px] font-bold uppercase transition-colors ${
+                className={`flex-1 min-h-[34px] rounded font-code-badge text-[11px] font-bold uppercase transition-colors ${
                   filtroRango === rango
                     ? 'bg-surface-container-high text-on-surface border border-[#2D3239]'
                     : 'text-secondary hover:text-on-surface'
                 }`}
               >
-                {rango} h
+                {rango}h
               </button>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Gráfico Interactivo de Línea (Recharts) ───────────────────────── */}
+      {/* ── Gráfico Interactivo Multigas (Recharts) ───────────────────────── */}
       <section
         aria-label="Gráfico de tendencia"
         className="flex flex-col bg-surface-container rounded-lg border border-[#2D3239] p-4 gap-3"
@@ -290,7 +388,8 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
           </div>
 
           <div className="flex items-center gap-4 text-secondary font-code-badge text-[11px] flex-wrap">
-            {filtroVariable === 'ch4' && (
+            {/* Leyendas normativas según el gas */}
+            {configVar.tipo === 'ch4' && (
               <>
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-0.5 border-t-2 border-dashed border-[#B2533E]" />
@@ -298,11 +397,40 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-2 bg-[#A38A3A]/25 border border-[#A38A3A]/40 rounded-xs" />
-                  <span>Franja Precaución ({((limiteSitio * 0.5)).toFixed(2)}% - {limiteSitio.toFixed(1)}%)</span>
+                  <span>Franja Precaución ({(limiteSitio * 0.5).toFixed(2)}% - {limiteSitio.toFixed(1)}%)</span>
                 </div>
               </>
             )}
-            <span>Mostrando {datosGrafico.length} puntos ({filtroRango} h)</span>
+
+            {configVar.tipo === 'rango' && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-0.5 border-t-2 border-dashed border-[#B2533E]" />
+                  <span>Mínimo Apto (19.5% Vol)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-2 bg-[#06B6D4]/20 border border-[#06B6D4]/40 rounded-xs" />
+                  <span>Rango Legal Apto (19.5% - 23.5% Vol)</span>
+                </div>
+              </>
+            )}
+
+            {configVar.tipo === 'limite_superior' && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-0.5 border-t-2 border-dashed border-[#B2533E]" />
+                  <span>Límite Legal ({configVar.limite} {configVar.unidad})</span>
+                </div>
+                {configVar.precaucionMin !== undefined && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-2 bg-[#A38A3A]/25 border border-[#A38A3A]/40 rounded-xs" />
+                    <span>Precaución ({configVar.precaucionMin} - {configVar.precaucionMax} {configVar.unidad})</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            <span>Mostrando {datosGrafico.length} puntos</span>
           </div>
         </div>
 
@@ -314,7 +442,7 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={datosGrafico} margin={{ top: 10, right: 24, left: -10, bottom: 0 }}>
+              <LineChart data={datosGrafico} margin={{ top: 12, right: 24, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#252932" />
                 <XAxis
                   dataKey="hora"
@@ -342,25 +470,25 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                   labelFormatter={(lbl) => `Hora: ${lbl}`}
                 />
 
-                {/* Franja de Precaución (50% a 100% del límite) para CH4 */}
-                {filtroVariable === 'ch4' && (
+                {/* 1. Franja de Precaución para CH4 */}
+                {configVar.tipo === 'ch4' && (
                   <ReferenceArea
                     y1={limiteSitio * 0.5}
                     y2={limiteSitio}
                     fill="#A38A3A"
-                    fillOpacity={0.10}
+                    fillOpacity={0.12}
                   />
                 )}
 
-                {/* Línea punteada en el Límite Legal para CH4 */}
-                {filtroVariable === 'ch4' && (
+                {/* 2. Línea punteada límite para CH4 */}
+                {configVar.tipo === 'ch4' && (
                   <ReferenceLine
                     y={limiteSitio}
                     stroke="#B2533E"
                     strokeDasharray="4 4"
                     strokeWidth={2}
                     label={{
-                      value: `Límite ${limiteSitio.toFixed(1)}%`,
+                      value: `Límite ${limiteSitio.toFixed(1)}% (${configVar.articulo})`,
                       position: 'top',
                       fill: '#D87661',
                       fontSize: 10,
@@ -369,20 +497,68 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                   />
                 )}
 
-                {/* Línea de referencia en 32°C para Temperatura */}
-                {filtroVariable === 'temperatura' && (
-                  <ReferenceLine
-                    y={32}
-                    stroke="#B2533E"
-                    strokeDasharray="4 4"
-                    label={{
-                      value: 'Máx 32°C (por validar)',
-                      position: 'top',
-                      fill: '#D87661',
-                      fontSize: 10,
-                      fontFamily: 'JetBrains Mono',
-                    }}
-                  />
+                {/* 3. Rango Apto para Oxígeno (O2) */}
+                {configVar.tipo === 'rango' && (
+                  <>
+                    <ReferenceArea
+                      y1={19.5}
+                      y2={23.5}
+                      fill="#06B6D4"
+                      fillOpacity={0.12}
+                    />
+                    <ReferenceLine
+                      y={19.5}
+                      stroke="#B2533E"
+                      strokeDasharray="4 4"
+                      strokeWidth={2}
+                      label={{
+                        value: 'Mínimo Apto 19.5% (Art. 38)',
+                        position: 'bottom',
+                        fill: '#D87661',
+                        fontSize: 10,
+                        fontFamily: 'JetBrains Mono',
+                      }}
+                    />
+                    <ReferenceLine
+                      y={23.5}
+                      stroke="#A38A3A"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: 'Máximo Apto 23.5%',
+                        position: 'top',
+                        fill: '#C2A855',
+                        fontSize: 10,
+                        fontFamily: 'JetBrains Mono',
+                      }}
+                    />
+                  </>
+                )}
+
+                {/* 4. Gases con Límite Superior (CO, H2S, NOx, CO2, Temperatura) */}
+                {configVar.tipo === 'limite_superior' && (
+                  <>
+                    {configVar.precaucionMin !== undefined && (
+                      <ReferenceArea
+                        y1={configVar.precaucionMin}
+                        y2={configVar.precaucionMax}
+                        fill="#A38A3A"
+                        fillOpacity={0.12}
+                      />
+                    )}
+                    <ReferenceLine
+                      y={configVar.limite}
+                      stroke="#B2533E"
+                      strokeDasharray="4 4"
+                      strokeWidth={2}
+                      label={{
+                        value: `Límite ${configVar.limite} ${configVar.unidad} (${configVar.articulo})`,
+                        position: 'top',
+                        fill: '#D87661',
+                        fontSize: 10,
+                        fontFamily: 'JetBrains Mono',
+                      }}
+                    />
+                  </>
                 )}
 
                 {/* Línea de datos */}
@@ -410,7 +586,7 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-secondary text-[20px]">table_rows</span>
             <h2 className="font-action-label text-[15px] font-bold text-on-surface uppercase">
-              Registro Tabular de Telemetría ({lecturasFiltradas.length} mediciones)
+              Registro Tabular de Telemetría Multigas ({lecturasFiltradas.length} mediciones)
             </h2>
           </div>
 
@@ -428,15 +604,19 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                 <th className="p-2.5">Nodo Sensor</th>
                 <th className="p-2.5">Nivel Mina</th>
                 <th className="p-2.5">CH₄ (%Vol)</th>
+                <th className="p-2.5">O₂ (%Vol)</th>
+                <th className="p-2.5">CO (ppm)</th>
+                <th className="p-2.5">H₂S (ppm)</th>
+                <th className="p-2.5">NOx (ppm)</th>
+                <th className="p-2.5">CO₂ (ppm)</th>
                 <th className="p-2.5">Temp (°C)</th>
-                <th className="p-2.5">Humedad (%)</th>
                 <th className="p-2.5">Estado Normativo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2D3239] font-body-md text-[13px]">
               {lecturasPaginadas.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-secondary font-code-badge">
+                  <td colSpan={11} className="p-6 text-center text-secondary font-code-badge">
                     No se encontraron registros para los filtros seleccionados
                   </td>
                 </tr>
@@ -468,7 +648,7 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                         {r.nivelMina}
                       </td>
                       <td
-                        className={`p-2.5 font-telemetry-value-md text-[14px] font-bold ${
+                        className={`p-2.5 font-telemetry-value-md text-[13px] font-bold ${
                           esAlarma
                             ? 'text-[#D87661]'
                             : esPrecaucion
@@ -478,11 +658,23 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                       >
                         {r.ch4.toFixed(2)}%
                       </td>
-                      <td className="p-2.5 font-telemetry-value-md text-[13px] text-secondary">
-                        {r.temperatura.toFixed(1)}°
+                      <td className="p-2.5 font-code-badge text-[12px] text-on-surface">
+                        {r.o2?.toFixed(1) ?? '20.9'}%
                       </td>
-                      <td className="p-2.5 font-telemetry-value-md text-[13px] text-secondary">
-                        {r.humedad}%
+                      <td className="p-2.5 font-code-badge text-[12px] text-on-surface">
+                        {r.co ?? 2}
+                      </td>
+                      <td className="p-2.5 font-code-badge text-[12px] text-secondary">
+                        {r.h2s?.toFixed(2) ?? '0.05'}
+                      </td>
+                      <td className="p-2.5 font-code-badge text-[12px] text-secondary">
+                        {r.nox?.toFixed(2) ?? '0.02'}
+                      </td>
+                      <td className="p-2.5 font-code-badge text-[12px] text-on-surface">
+                        {r.co2 ?? 450}
+                      </td>
+                      <td className="p-2.5 font-code-badge text-[12px] text-secondary">
+                        {r.temperatura.toFixed(1)}°
                       </td>
                       <td className="p-2.5">
                         <span
@@ -536,4 +728,3 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
     </div>
   );
 }
-

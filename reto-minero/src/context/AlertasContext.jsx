@@ -14,6 +14,7 @@ import {
 import { narrarAlerta } from '../alertas/voz.js';
 import { vibrarAlerta, detenerVibracion } from '../alertas/vibracion.js';
 import { useToast } from '../components/Toast.jsx';
+import { alertasRepo } from '../data/repositorio.js';
 
 export const AlertasContext = createContext(null);
 
@@ -125,12 +126,15 @@ export function AlertasProvider({ children }) {
     setAlertas((prev) => {
       const actualizadas = prev.map((a) => {
         if (a.id === alertaId) {
-          return {
+          const alertaGuardada = {
             ...a,
             reconocida: true,
             reconocidaPor: supervisor,
             horaReconocida: horaActual,
           };
+          // Persistir en IndexedDB
+          alertasRepo.guardar(alertaGuardada).catch(() => {});
+          return alertaGuardada;
         }
         return a;
       });

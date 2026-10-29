@@ -162,51 +162,77 @@ export function NodoCard({
           <div className="flex flex-wrap items-center gap-3 font-code-badge text-[11px] text-secondary mt-1">
             <span>Último CH₄: <strong className="text-on-surface">{lectura?.ch4?.toFixed(1) ?? '--'}%</strong></span>
             <span>·</span>
-            <span>Batería: <strong className="text-on-surface">{lectura?.bateria ?? '--'}%</strong></span>
+            <span>O₂: <strong className="text-on-surface">{lectura?.o2?.toFixed(1) ?? '20.9'}%</strong></span>
             <span>·</span>
-            <span>LoRa RSSI: <strong className="text-on-surface">{lectura?.rssi ?? '--'} dBm</strong></span>
+            <span>CO: <strong className="text-on-surface">{lectura?.co ?? 2} PPM</strong></span>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 my-3">
-          {/* CH4 Metano */}
-          <div className={`flex flex-col p-2 rounded border ${e.ch4Bg}`}>
-            <span className="font-code-badge text-[11px] text-secondary">CH₄ METANO</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className={`font-telemetry-value-md text-[24px] font-bold ${e.valueText}`}>
-                {lectura?.ch4?.toFixed(1) ?? '--'}
+        <div className="flex flex-col gap-2 my-3">
+          <div className="grid grid-cols-3 gap-2">
+            {/* CH4 Metano */}
+            <div className={`flex flex-col p-2 rounded border ${e.ch4Bg}`}>
+              <span className="font-code-badge text-[11px] text-secondary">CH₄ METANO</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className={`font-telemetry-value-md text-[24px] font-bold ${e.valueText}`}>
+                  {lectura?.ch4?.toFixed(1) ?? '--'}
+                </span>
+                <span className="font-telemetry-unit text-[12px] text-secondary">%Vol</span>
+              </div>
+              <span className="font-code-badge text-[10px] text-secondary mt-0.5">
+                Límite: {limiteValor.toFixed(1)}% ({limiteArticulo})
               </span>
-              <span className="font-telemetry-unit text-[12px] text-secondary">%Vol</span>
             </div>
-            <span className="font-code-badge text-[10px] text-secondary mt-0.5">
-              Límite: {limiteValor.toFixed(1)}% ({limiteArticulo})
-            </span>
+
+            {/* Temperatura */}
+            <div className="flex flex-col p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
+              <span className="font-code-badge text-[11px] text-secondary">TEMPERATURA</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-telemetry-value-md text-[24px] font-bold text-on-surface">
+                  {lectura?.temperatura?.toFixed(1) ?? '--'}
+                </span>
+                <span className="font-telemetry-unit text-[12px] text-secondary">°C</span>
+              </div>
+              <span className="font-code-badge text-[10px] text-secondary mt-0.5">
+                Límite por validar
+              </span>
+            </div>
+
+            {/* Humedad */}
+            <div className="flex flex-col p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
+              <span className="font-code-badge text-[11px] text-secondary">HUMEDAD</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-telemetry-value-md text-[24px] font-bold text-on-surface">
+                  {lectura?.humedad ?? '--'}
+                </span>
+                <span className="font-telemetry-unit text-[12px] text-secondary">%</span>
+              </div>
+              <span className="font-code-badge text-[10px] text-secondary mt-0.5">Informativa</span>
+            </div>
           </div>
 
-          {/* Temperatura */}
-          <div className="flex flex-col p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
-            <span className="font-code-badge text-[11px] text-secondary">TEMPERATURA</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="font-telemetry-value-md text-[24px] font-bold text-on-surface">
-                {lectura?.temperatura?.toFixed(1) ?? '--'}
-              </span>
-              <span className="font-telemetry-unit text-[12px] text-secondary">°C</span>
+          {/* Barra Multigas: O2, CO, H2S, NOx, CO2 */}
+          <div className="grid grid-cols-5 gap-1 p-2 bg-surface-container-lowest rounded border border-[#2D3239] text-center">
+            <div className="flex flex-col" title="Oxígeno (Rango legal 19.5% - 23.5%)">
+              <span className="font-code-badge text-[9px] text-secondary uppercase font-semibold">O₂</span>
+              <span className="font-code-badge text-[11px] font-bold text-on-surface">{lectura?.o2?.toFixed(1) ?? '20.9'}%</span>
             </div>
-            <span className="font-code-badge text-[10px] text-secondary mt-0.5">
-              Límite por validar
-            </span>
-          </div>
-
-          {/* Humedad */}
-          <div className="flex flex-col p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
-            <span className="font-code-badge text-[11px] text-secondary">HUMEDAD</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="font-telemetry-value-md text-[24px] font-bold text-on-surface">
-                {lectura?.humedad ?? '--'}
-              </span>
-              <span className="font-telemetry-unit text-[12px] text-secondary">%</span>
+            <div className="flex flex-col border-l border-[#2D3239]" title="Monóxido de Carbono (Límite 25 PPM)">
+              <span className="font-code-badge text-[9px] text-secondary uppercase font-semibold">CO</span>
+              <span className="font-code-badge text-[11px] font-bold text-on-surface">{lectura?.co ?? 2} <span className="text-[8px] font-normal text-secondary">ppm</span></span>
             </div>
-            <span className="font-code-badge text-[10px] text-secondary mt-0.5">Informativa</span>
+            <div className="flex flex-col border-l border-[#2D3239]" title="Ácido Sulfhídrico (Límite 1 PPM)">
+              <span className="font-code-badge text-[9px] text-secondary uppercase font-semibold">H₂S</span>
+              <span className="font-code-badge text-[11px] font-bold text-on-surface">{lectura?.h2s?.toFixed(2) ?? '0.05'} <span className="text-[8px] font-normal text-secondary">ppm</span></span>
+            </div>
+            <div className="flex flex-col border-l border-[#2D3239]" title="Gases Nitrosos (Límite 0.2 PPM)">
+              <span className="font-code-badge text-[9px] text-secondary uppercase font-semibold">NOx</span>
+              <span className="font-code-badge text-[11px] font-bold text-on-surface">{lectura?.nox?.toFixed(2) ?? '0.02'} <span className="text-[8px] font-normal text-secondary">ppm</span></span>
+            </div>
+            <div className="flex flex-col border-l border-[#2D3239]" title="Dióxido de Carbono (Límite 5000 PPM)">
+              <span className="font-code-badge text-[9px] text-secondary uppercase font-semibold">CO₂</span>
+              <span className="font-code-badge text-[11px] font-bold text-on-surface">{lectura?.co2 ?? 450} <span className="text-[8px] font-normal text-secondary">ppm</span></span>
+            </div>
           </div>
         </div>
       )}
@@ -217,16 +243,6 @@ export function NodoCard({
           <span className="flex items-center gap-1">
             <span className="material-symbols-outlined text-[15px]">schedule</span>
             <span>{tiempoTexto}</span>
-          </span>
-          <span>·</span>
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px]">battery_std</span>
-            <span>{lectura?.bateria ?? '--'}%</span>
-          </span>
-          <span>·</span>
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px]">wifi</span>
-            <span>LoRa {lectura?.rssi ?? '--'} dBm</span>
           </span>
         </div>
 
