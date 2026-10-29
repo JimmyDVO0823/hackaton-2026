@@ -2,108 +2,12 @@
 <html class="dark" lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta content="web_dashboard" name="shell-type" />
-    <title>ATMO-MONITOR | Monitoreo Atmosférico Minero PWA</title>
-    
-    <!-- Google Fonts: Inter & JetBrains Mono -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
-    
-    <!-- Google Material Symbols Outlined -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24..48,400..700,0..1,-50..200" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    
-    <!-- Tailwind CSS with custom mining theme config -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              "on-secondary-container": "#9fa4b0",
-              "surface-container-high": "#23262c",
-              "surface": "#121417",
-              "surface-variant": "#282c34",
-              "secondary-fixed-dim": "#9da3b2",
-              "secondary-container": "#2a2e37",
-              "error-container": "#5c2222",
-              "on-secondary-fixed": "#e2e4ea",
-              "on-primary": "#181a1e",
-              "primary-fixed": "#ded8ca",
-              "on-background": "#d8dade",
-              "on-primary-fixed-variant": "#3a372f",
-              "surface-container": "#1a1d22",
-              "surface-container-low": "#15171b",
-              "secondary": "#9fa4b0",
-              "surface-container-highest": "#2e323a",
-              "on-surface-variant": "#b8bcc6",
-              "surface-tint": "#c29b38",
-              "outline-variant": "#2d3239",
-              "on-primary-fixed": "#1e1c17",
-              "tertiary": "#a6abb8",
-              "tertiary-fixed": "#d2d5dc",
-              "background": "#121417",
-              "on-tertiary-fixed-variant": "#30343e",
-              "on-surface": "#dce0e6",
-              "tertiary-container": "#272b33",
-              "primary-fixed-dim": "#b5ab92",
-              "on-secondary-fixed-variant": "#383e4a",
-              "inverse-on-surface": "#181a1e",
-              "error": "#d97575",
-              "primary-container": "#c29b38",
-              "inverse-surface": "#dce0e6",
-              "tertiary-fixed-dim": "#9fa4b0",
-              "on-secondary": "#d8dade",
-              "secondary-fixed": "#cfd3dc",
-              "on-error": "#ffffff",
-              "outline": "#484f5c",
-              "surface-bright": "#343842",
-              "inverse-primary": "#5e4a1a",
-              "on-tertiary": "#ffffff",
-              "on-tertiary-fixed": "#17191e",
-              "primary": "#d2b56d",
-              "surface-container-lowest": "#0d0f12",
-              "on-tertiary-container": "#c2c6d0",
-              "surface-dim": "#121417",
-              "on-error-container": "#f0bebe",
-              "on-primary-container": "#1a170f"
-            },
-            borderRadius: {
-              DEFAULT: "0.125rem",
-              lg: "0.25rem",
-              xl: "0.375rem",
-              full: "0.5rem"
-            },
-            spacing: {
-              gutter: "1rem",
-              "space-xl": "2rem",
-              "space-xs": "0.25rem",
-              "space-sm": "0.5rem",
-              margin: "1rem",
-              "space-md": "1rem",
-              "space-lg": "1.5rem"
-            },
-            fontFamily: {
-              "telemetry-unit": ["JetBrains Mono", "monospace"],
-              "body-md": ["Inter", "sans-serif"],
-              "headline-xl": ["Inter", "sans-serif"],
-              "code-badge": ["JetBrains Mono", "monospace"],
-              "telemetry-value-lg": ["JetBrains Mono", "monospace"],
-              "telemetry-value-md": ["JetBrains Mono", "monospace"],
-              "headline-md": ["Inter", "sans-serif"],
-              "body-lg": ["Inter", "sans-serif"],
-              "action-label": ["Inter", "sans-serif"],
-              "headline-lg": ["Inter", "sans-serif"],
-              "display-critical": ["JetBrains Mono", "monospace"]
-            }
-          }
-        }
-      };
-    </script>
+    <meta name="theme-color" content="#121417" />
+    <meta name="description" content="ATMO-MONITOR – Red de sensores de metano y telemetría atmosférica para minería subterránea" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <title>ATMO-MONITOR – Red de sensores de metano</title>
   </head>
   <body class="bg-surface text-on-surface font-body-md select-none">
     <div id="root"></div>

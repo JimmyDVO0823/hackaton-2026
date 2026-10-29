@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMina } from '../hooks/useMina.js';
+import { useConexion } from '../hooks/useConexion.js';
 
 /**
  * Encabezado de telemetría y estado operativo en tiempo real
@@ -7,6 +8,7 @@ import { useMina } from '../hooks/useMina.js';
  */
 export function Header() {
   const { configMina } = useMina();
+  const { estaEnLinea } = useConexion();
   const [currentTime, setCurrentTime] = useState('');
 
   useEffect(() => {
@@ -33,9 +35,15 @@ export function Header() {
         </div>
         <div className="h-6 w-[1px] bg-[#2D3239] mx-space-xs" />
         <div className="flex items-center gap-space-xs px-2.5 py-1 bg-surface-container-lowest border border-[#2D3239] rounded">
-          <span className="material-symbols-outlined text-[#A38A3A] text-[18px]">cloud_off</span>
+          <span
+            className={`material-symbols-outlined text-[18px] ${
+              estaEnLinea ? 'text-[#6DAA81]' : 'text-[#A38A3A]'
+            }`}
+          >
+            {estaEnLinea ? 'cloud_done' : 'cloud_off'}
+          </span>
           <span className="font-code-badge text-[12px] text-secondary uppercase">
-            Sin conexión – datos locales
+            {estaEnLinea ? 'En línea – sincronizado' : 'Sin conexión – datos locales'}
           </span>
         </div>
       </div>

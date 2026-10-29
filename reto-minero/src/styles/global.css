@@ -1,7 +1,79 @@
-/* ==========================================================================
-   ATMO-MONITOR: ESTILOS GLOBALES
-   REGLA: styles/ contiene los estilos globales de la PWA.
-   ========================================================================== */
+@import "tailwindcss";
+
+@theme {
+  --color-on-secondary-container: #9fa4b0;
+  --color-surface-container-high: #23262c;
+  --color-surface: #121417;
+  --color-surface-variant: #282c34;
+  --color-secondary-fixed-dim: #9da3b2;
+  --color-secondary-container: #2a2e37;
+  --color-error-container: #5c2222;
+  --color-on-secondary-fixed: #e2e4ea;
+  --color-on-primary: #181a1e;
+  --color-primary-fixed: #ded8ca;
+  --color-on-background: #d8dade;
+  --color-on-primary-fixed-variant: #3a372f;
+  --color-surface-container: #1a1d22;
+  --color-surface-container-low: #15171b;
+  --color-secondary: #9fa4b0;
+  --color-surface-container-highest: #2e323a;
+  --color-on-surface-variant: #b8bcc6;
+  --color-surface-tint: #c29b38;
+  --color-outline-variant: #2d3239;
+  --color-on-primary-fixed: #1e1c17;
+  --color-tertiary: #a6abb8;
+  --color-tertiary-fixed: #d2d5dc;
+  --color-background: #121417;
+  --color-on-tertiary-fixed-variant: #30343e;
+  --color-on-surface: #dce0e6;
+  --color-tertiary-container: #272b33;
+  --color-primary-fixed-dim: #b5ab92;
+  --color-on-secondary-fixed-variant: #383e4a;
+  --color-inverse-on-surface: #181a1e;
+  --color-error: #d97575;
+  --color-primary-container: #c29b38;
+  --color-inverse-surface: #dce0e6;
+  --color-tertiary-fixed-dim: #9fa4b0;
+  --color-on-secondary: #d8dade;
+  --color-secondary-fixed: #cfd3dc;
+  --color-on-error: #ffffff;
+  --color-outline: #484f5c;
+  --color-surface-bright: #343842;
+  --color-inverse-primary: #5e4a1a;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #17191e;
+  --color-primary: #d2b56d;
+  --color-surface-container-lowest: #0d0f12;
+  --color-on-tertiary-container: #c2c6d0;
+  --color-surface-dim: #121417;
+  --color-on-error-container: #f0bebe;
+  --color-on-primary-container: #1a170f;
+
+  --spacing-gutter: 1rem;
+  --spacing-space-xl: 2rem;
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-margin: 1rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.375rem;
+  --radius-full: 0.5rem;
+
+  --font-telemetry-unit: "JetBrains Mono", monospace;
+  --font-body-md: "Inter", sans-serif;
+  --font-headline-xl: "Inter", sans-serif;
+  --font-code-badge: "JetBrains Mono", monospace;
+  --font-telemetry-value-lg: "JetBrains Mono", monospace;
+  --font-telemetry-value-md: "JetBrains Mono", monospace;
+  --font-headline-md: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-action-label: "Inter", sans-serif;
+  --font-headline-lg: "Inter", sans-serif;
+  --font-display-critical: "JetBrains Mono", monospace;
+}
 
 @layer base {
   html, body {
@@ -19,7 +91,7 @@
   }
 }
 
-/* Ocultar barra de desplazamiento estándar manteniendo interacción táctil */
+/* Ocultar barra de desplazamiento estándar manteniendo interactividad táctil */
 ::-webkit-scrollbar {
   display: none;
 }
@@ -79,7 +151,7 @@
   line-height: 1.5;
 }
 
-/* Efectos táctiles y transiciones */
+/* Transiciones táctiles */
 .sector-card {
   transition: transform 0.2s ease, filter 0.3s ease, border-color 0.2s ease;
 }
@@ -113,4 +185,3 @@
     box-shadow: 0 0 0 rgba(194, 155, 56, 0);
   }
 }
-

@@ -6,7 +6,6 @@ import { MeasurementModal } from './components/MeasurementModal';
 import { AlarmModal } from './components/AlarmModal';
 import { useAtmosphericData } from './hooks/useAtmosphericData';
 import { useAlertas } from './hooks/useAlertas';
-import './styles/global.css';
 
 export function App() {
   const { sectors, registrarMedicion } = useAtmosphericData();
