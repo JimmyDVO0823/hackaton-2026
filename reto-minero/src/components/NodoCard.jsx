@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TIPOS_SITIO } from '../config/tiposSitio.js';
 import { LIMITES_DECRETO_1886 } from '../config/limites.js';
 
@@ -6,7 +6,14 @@ import { LIMITES_DECRETO_1886 } from '../config/limites.js';
  * Tarjeta individual de nodo sensor con telemetría y estado calculado.
  * REGLA: Nunca lee un estado escrito a mano; usa nodo.evaluacion.
  */
-export function NodoCard({ nodo, isSelected, onActivarBocina, bocinaActiva = false }) {
+export function NodoCard({
+  nodo,
+  isSelected,
+  onActivarBocina,
+  bocinaActiva = false,
+}) {
+  const [ahora] = useState(() => Date.now());
+
   const { id, nombre, ubicacion, tipoSitio, nivel, lectura, alarmaLocalActiva, evaluacion } = nodo;
   const nivelRiesgo = evaluacion?.nivel ?? 'NORMAL';
   const alertaPrincipal = evaluacion?.alertaPrincipal;
@@ -71,7 +78,7 @@ export function NodoCard({ nodo, isSelected, onActivarBocina, bocinaActiva = fal
 
   // ── Tiempo desde última transmisión ────────────────────────────────────────
   const fechaLectura = new Date(lectura?.fecha ?? 0);
-  const minutos = Math.max(0, Math.round((Date.now() - fechaLectura.getTime()) / 60000));
+  const minutos = Math.max(0, Math.round((ahora - fechaLectura.getTime()) / 60000));
   const tiempoTexto = minutos < 60 ? `Hace ${minutos} min` : 'Hace +1h';
 
   return (
@@ -93,8 +100,9 @@ export function NodoCard({ nodo, isSelected, onActivarBocina, bocinaActiva = fal
               {nivel}
             </span>
             {alarmaLocalActiva && (
-              <span className="font-code-badge text-[10px] px-1.5 py-0.5 rounded bg-[#B2533E] text-white font-bold animate-pulse shrink-0">
-                SIRENA LOCAL
+              <span className="font-code-badge text-[10px] px-2 py-0.5 rounded bg-[#B2533E] text-white font-bold animate-pulse shrink-0 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                SIRENA + BALIZA LOCAL ACTIVA
               </span>
             )}
           </div>
@@ -123,20 +131,24 @@ export function NodoCard({ nodo, isSelected, onActivarBocina, bocinaActiva = fal
 
       {/* ── Lecturas de telemetría ────────────────────────────────────────── */}
       {nivelRiesgo === 'SIN_SEÑAL' ? (
-        /* Mensaje especial SIN_SEÑAL */
+        /* Mensaje especial SIN_SEÑAL según normativa */
         <div className="flex flex-col gap-2 my-3 p-3 bg-surface-container-lowest rounded border border-dashed border-[#5A606E]">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-secondary">signal_disconnected</span>
-            <span className="font-code-badge text-[12px] text-secondary font-semibold">
+          <div className="flex items-center gap-2 text-[#9DA3B2]">
+            <span className="material-symbols-outlined text-[20px]">signal_disconnected</span>
+            <span className="font-code-badge text-[12px] font-bold uppercase tracking-wider">
               Sin transmisión · {tiempoTexto}
             </span>
           </div>
-          <p className="font-code-badge text-[11px] text-[#9DA3B2] leading-relaxed">
-            La alarma local del nodo (sirena + baliza) sigue protegiendo el sitio de forma autónoma.
+          <p className="font-code-badge text-[11px] text-[#C2A855] bg-[#2A261A]/50 p-2 rounded border border-[#A38A3A]/30 leading-relaxed font-semibold">
+            🛡️ La alarma local del nodo sigue protegiendo el sitio.
           </p>
-          <p className="font-code-badge text-[10px] text-secondary">
-            Último CH₄ registrado: <strong className="text-on-surface">{lectura?.ch4?.toFixed(1) ?? '--'}%</strong>
-          </p>
+          <div className="flex flex-wrap items-center gap-3 font-code-badge text-[11px] text-secondary mt-1">
+            <span>Último CH₄: <strong className="text-on-surface">{lectura?.ch4?.toFixed(1) ?? '--'}%</strong></span>
+            <span>·</span>
+            <span>Batería: <strong className="text-on-surface">{lectura?.bateria ?? '--'}%</strong></span>
+            <span>·</span>
+            <span>LoRa RSSI: <strong className="text-on-surface">{lectura?.rssi ?? '--'} dBm</strong></span>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 my-3">
@@ -184,31 +196,42 @@ export function NodoCard({ nodo, isSelected, onActivarBocina, bocinaActiva = fal
 
       {/* ── Footer: hardware + acciones ──────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-space-sm pt-2 border-t border-[#2D3239]">
-        <div className="flex items-center gap-space-sm text-secondary font-code-badge text-[11px]">
+        <div className="flex items-center gap-space-sm text-secondary font-code-badge text-[11px] flex-wrap">
           <span className="flex items-center gap-1">
             <span className="material-symbols-outlined text-[15px]">schedule</span>
             <span>{tiempoTexto}</span>
           </span>
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px]">battery_std</span>
+            <span>{lectura?.bateria ?? '--'}%</span>
+          </span>
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px]">wifi</span>
+            <span>LoRa {lectura?.rssi ?? '--'} dBm</span>
+          </span>
         </div>
 
         {/* Bocina por nodo */}
-        <button
-          type="button"
-          onClick={() => onActivarBocina && onActivarBocina(id)}
-          title={bocinaActiva ? 'Bocina activa — clic para desactivar' : 'Activar bocina en este sitio'}
-          className={`min-h-[44px] px-3 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase border transition-colors ${
-            bocinaActiva
-              ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
-              : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {bocinaActiva ? 'volume_up' : 'volume_off'}
-          </span>
-          <span>{bocinaActiva ? 'Bocina ON' : 'Bocina'}</span>
-        </button>
+        {onActivarBocina && (
+          <button
+            type="button"
+            onClick={() => onActivarBocina(id)}
+            title={bocinaActiva ? 'Bocina activa · clic para desactivar' : 'Activar bocina en este sitio'}
+            className={`min-h-[40px] px-3 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase border transition-colors ${
+              bocinaActiva
+                ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
+                : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {bocinaActiva ? 'volume_up' : 'volume_off'}
+            </span>
+            <span>{bocinaActiva ? 'Bocina ON' : 'Bocina'}</span>
+          </button>
+        )}
       </div>
     </article>
   );
 }
-

@@ -38,6 +38,7 @@ export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNo
   const NIVELES = ['N-1', 'N-2', 'N-3'];
 
   // ── Filtro de nivel (null = mostrar todos los niveles) ────────────────────────
+  const [ahora] = useState(() => Date.now());
   const [activeLevel, setActiveLevel] = useState('N-1');
   const showAll = activeLevel === null;
 
@@ -45,11 +46,7 @@ export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNo
     ? nodos
     : nodos.filter((n) => n.nivel === activeLevel);
 
-  const nodosCriticos = nodosFiltrados.filter(
-    (n) => n.evaluacion?.nivel === 'ALARMA' || n.evaluacion?.nivel === 'EVACUACION'
-  );
-
-  // ── Zoom / Pan ───────────────────────────────────────────────────────────────
+    // ── Zoom / Pan ───────────────────────────────────────────────────────────────
   const [zoom, setZoom]   = useState(1);
   const [pan, setPan]     = useState({ x: 0, y: 0 });
   const dragging          = useRef(false);
@@ -189,18 +186,6 @@ export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNo
 
         {/* ── Controles de cabecera ─────────────────────────────────────────── */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Centrar críticos */}
-          {nodosCriticos.length > 0 && (
-            <button
-              type="button"
-              onClick={() => onSelectNodo(nodosCriticos[0].id)}
-              title="Centrar en nodo crítico"
-              className="min-h-[42px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center gap-1.5 font-action-label text-[13px] uppercase border border-[#2D3239] transition-all active:scale-[0.98]"
-            >
-              <span className="material-symbols-outlined text-[#C29B38] text-[20px]">filter_center_focus</span>
-              <span>Centrar Críticos</span>
-            </button>
-          )}
 
           {/* Importar DXF (solo UI) */}
           <input
@@ -395,7 +380,7 @@ export function MineMap({ nodos = [], onSelectNodo, _onFocusCritical, selectedNo
               const nivel      = nodo.evaluacion?.nivel ?? 'NORMAL';
               const p          = PALETA[nivel];
               const isSelected = selectedNodoId === nodo.id;
-              const tiempoMin  = Math.round((Date.now() - new Date(nodo.lectura?.fecha ?? 0).getTime()) / 60000);
+              const tiempoMin  = Math.round((ahora - new Date(nodo.lectura?.fecha ?? 0).getTime()) / 60000);
               const ch4        = nodo.lectura?.ch4?.toFixed(1) ?? '--';
 
               return (

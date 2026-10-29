@@ -2,32 +2,27 @@ import React, { useState, useCallback } from 'react';
 import { MainLayout } from './layout/MainLayout';
 import { TableroPage } from './pages/TableroPage';
 import { AlarmModal } from './components/AlarmModal';
-import { useAlertas } from './hooks/useAlertas';
+import { ToastProvider } from './components/Toast.jsx';
+import { AlertasProvider, useAlertasContext } from './context/AlertasContext.jsx';
 
-/**
- * Raíz de la aplicación ATMO-MONITOR.
- * Gestiona la ruta activa, el modal de alarma y los handlers de SOS.
- * Sincroniza el estado de las bocinas entre el Sidebar y el menú derecho del Tablero.
- */
-export function App() {
-  const { audioHabilitado, habilitarAudio, dispararAlerta, silenciar } = useAlertas();
+function AppContent() {
+  const {
+    audioHabilitado,
+    habilitarAudio,
+    abrirConfirmEvacuacion,
+    abrirModalAlerta,
+    alertas,
+  } = useAlertasContext();
 
   const [activeRoute, setActiveRoute] = useState('tablero');
-  const [alarmModalState, setAlarmModalState] = useState({
-    isOpen: false,
-    sectorName: '',
-    isEvacuation: false,
-  });
 
-  // ── Bocinas sincronizadas (Sitios específicos + Global) ─────────────────────
-  const [bocinasActivas, setBocinasActivas] = useState({}); // { [nodoId]: boolean }
+  // ── Bocinas sincronizadas (Sitios específicos + Global) ──────────────────────
+  const [bocinasActivas, setBocinasActivas] = useState({});
   const [bocinaGlobalActiva, setBocinaGlobalActiva] = useState(false);
 
-  // Hay bocina activa si la global está encendida o al menos un sitio individual lo está
   const hayBocinaActiva = bocinaGlobalActiva || Object.values(bocinasActivas).some(Boolean);
 
   const handleToggleBocinaNodo = useCallback((nodoId) => {
-    // Si la bocina global estaba activa y se desactiva un nodo, se apaga el modo global
     setBocinasActivas((prev) => ({ ...prev, [nodoId]: !prev[nodoId] }));
   }, []);
 
@@ -39,7 +34,6 @@ export function App() {
     });
   }, []);
 
-  // Control desde el Sidebar: si hay alguna bocina activa apaga todo; si no, activa la global
   const handleToggleBocinaSidebar = useCallback(() => {
     if (!audioHabilitado) {
       habilitarAudio?.();
@@ -52,40 +46,29 @@ export function App() {
     }
   }, [hayBocinaActiva, audioHabilitado, habilitarAudio]);
 
-  // ── Disparadores de Alarma ──────────────────────────────────────────────────
-  const handleTriggerAlarm = (sectorName) => {
-    setAlarmModalState({ isOpen: true, sectorName, isEvacuation: false });
-  };
-
-  const handleTriggerSOS = () => {
-    setAlarmModalState({ isOpen: true, sectorName: 'Mina General', isEvacuation: true });
-  };
-
-  const handleConfirmAlarm = () => {
-    const { sectorName, isEvacuation } = alarmModalState;
-    setAlarmModalState({ isOpen: false, sectorName: '', isEvacuation: false });
-
-    if (isEvacuation) {
-      dispararAlerta({ nivel: 'EVACUACION', gas: 'CH4', valor: 2.5, sector: 'Mina General' });
-      alert('¡ALERTA DE EVACUACIÓN GENERAL EMITIDA! Sirena y protocolo de vida activados.');
+  // Disparar modal de alarma para un sector/nodo específico desde la lista
+  const handleTriggerAlarm = useCallback((sectorName) => {
+    const alertaEncontrada = alertas.find((a) => a.nombre.toLowerCase().includes(sectorName.toLowerCase()));
+    if (alertaEncontrada) {
+      abrirModalAlerta(alertaEncontrada);
     } else {
-      dispararAlerta({ nivel: 'ALARMA', gas: 'CH4', valor: 1.5, sector: sectorName });
-      alert(
-        `Protocolo de Suspensión Activado para ${sectorName}. Notificación enviada al personal de ventilación.`
-      );
+      // Abre modal con datos reales si existe o de confirmación general
+      abrirConfirmEvacuacion();
     }
-  };
+  }, [alertas, abrirModalAlerta, abrirConfirmEvacuacion]);
 
-  // ── Props del Sidebar (incluye estado de bocina sincronizado) ───────────────
+  // Props del Sidebar
   const sidebarProps = {
     activeRoute,
     onNavigate: setActiveRoute,
-    onTriggerSOS: handleTriggerSOS,
+    onTriggerSOS: abrirConfirmEvacuacion, // Protocolo Evacuación abre el modal sin datos inventados
     bocinaActiva: hayBocinaActiva,
     onToggleBocina: handleToggleBocinaSidebar,
+    audioHabilitado,
+    onHabilitarAudio: habilitarAudio,
   };
 
-  // ── Pantalla activa ─────────────────────────────────────────────────────────
+  // Pantalla activa
   const renderContent = () => {
     if (activeRoute === 'tablero') {
       return (
@@ -126,18 +109,19 @@ export function App() {
         {renderContent()}
       </MainLayout>
 
-      {/* Modal de Alarma — fuera del layout para quedar encima de todo */}
-      <AlarmModal
-        isOpen={alarmModalState.isOpen}
-        sectorName={alarmModalState.sectorName}
-        isEvacuation={alarmModalState.isEvacuation}
-        onClose={() => {
-          silenciar();
-          setAlarmModalState({ isOpen: false, sectorName: '', isEvacuation: false });
-        }}
-        onConfirm={handleConfirmAlarm}
-      />
+      {/* Modal unificado de Alarma y Evacuación */}
+      <AlarmModal />
     </>
+  );
+}
+
+export function App() {
+  return (
+    <ToastProvider>
+      <AlertasProvider>
+        <AppContent />
+      </AlertasProvider>
+    </ToastProvider>
   );
 }
 
