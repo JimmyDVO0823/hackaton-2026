@@ -27,7 +27,6 @@ function AppContent() {
   // Gestión de turnos de 8h y descarga automática de resumen CSV
   const {
     turnoActual,
-    descargarTurnoActual,
     simularFinDeTurno,
   } = useTurnoAutomatico((msg, tipo) => mostrarToast(msg, tipo), supervisorTurno);
 
@@ -99,7 +98,6 @@ function AppContent() {
 
   const turnoProps = {
     turnoActual,
-    descargarTurnoActual,
     simularFinDeTurno,
   };
 
