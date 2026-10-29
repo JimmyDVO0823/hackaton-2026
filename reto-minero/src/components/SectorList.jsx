@@ -1,5 +1,5 @@
 import React from 'react';
-import { SectorCard } from './SectorCard';
+import { NodoCard } from './NodoCard';
 
 /**
  * Columna derecha: lista de tarjetas de nodos con buscador y filtros.
@@ -11,11 +11,11 @@ export function SectorList({
   onSearchChange,
   onResetFilters,
   selectedNodoId,
-  onTriggerAlarm
+  onTriggerAlarm,
 }) {
   return (
     <section className="lg:col-span-5 flex flex-col gap-space-md">
-      {/* Buscador táctil y botón de restablecer */}
+      {/* Buscador */}
       <div className="flex items-center gap-space-sm bg-surface-container p-2 rounded border border-[#2D3239]">
         <div className="flex-1 flex items-center bg-surface-container-lowest px-3 py-1.5 rounded min-h-[48px] border border-[#2D3239]">
           <span className="material-symbols-outlined text-secondary text-[20px] mr-2">search</span>
@@ -37,7 +37,7 @@ export function SectorList({
         </button>
       </div>
 
-      {/* Lista desplazable con tarjetas */}
+      {/* Lista de tarjetas */}
       <div className="flex flex-col gap-space-md max-h-[640px] overflow-y-auto pr-1">
         {nodos.length === 0 ? (
           <div className="p-8 text-center bg-surface-container rounded border border-[#2D3239] text-secondary">
@@ -53,7 +53,7 @@ export function SectorList({
           </div>
         ) : (
           nodos.map((nodo) => (
-            <SectorCard
+            <NodoCard
               key={nodo.id}
               nodo={nodo}
               isSelected={selectedNodoId === nodo.id}

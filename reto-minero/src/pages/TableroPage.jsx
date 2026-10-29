@@ -8,31 +8,25 @@ import { useNodos } from '../hooks/useNodos';
 /**
  * Pantalla Principal: Tablero de Monitoreo Atmosférico.
  * REGLA: pages/ contiene las pantallas del flujo de usuario.
- * Obtiene los nodos con evaluación calculada desde useNodos (hook de lógica).
+ * Obtiene los nodos con evaluación calculada desde useNodos.
  */
 export function TableroPage({ onTriggerAlarm }) {
   const { nodos } = useNodos();
 
-  const [activeFilter, setActiveFilter] = useState(null);
-  const [searchTerm, setSearchTerm]     = useState('');
+  const [activeFilter, setActiveFilter]     = useState(null);
+  const [searchTerm, setSearchTerm]         = useState('');
   const [selectedNodoId, setSelectedNodoId] = useState(null);
 
   const handleSelectNodo = (nodoId) => {
     setSelectedNodoId(nodoId);
     const cardEl = document.getElementById(`card-${nodoId}`);
-    if (cardEl) {
-      cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const handleFocusCritical = () => {
-    handleSelectNodo('retorno-principal');
-  };
-
-  /** Filtra por KPI activo (nivel de evaluación) y por texto de búsqueda */
+  /** Filtra por KPI activo (nivel de evaluación) y por texto de búsqueda.
+   *  El filtro "ALARMA" captura también EVACUACION. */
   const nodosFiltrados = nodos.filter((nodo) => {
     const nivel = nodo.evaluacion?.nivel ?? 'NORMAL';
-    // El filtro ALARMA captura también EVACUACION
     const matchesFilter =
       activeFilter === null ||
       nivel === activeFilter ||
@@ -57,12 +51,17 @@ export function TableroPage({ onTriggerAlarm }) {
         onFilterSelect={setActiveFilter}
       />
 
-      {/* 2. Cuerpo Principal: Mapa + Lista */}
+      {/* 2. Mapa + Lista */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
         <MineMap
           nodos={nodos}
           onSelectNodo={handleSelectNodo}
-          onFocusCritical={handleFocusCritical}
+          onFocusCritical={() => {
+            const critico = nodos.find(
+              n => n.evaluacion?.nivel === 'ALARMA' || n.evaluacion?.nivel === 'EVACUACION'
+            );
+            if (critico) handleSelectNodo(critico.id);
+          }}
           selectedNodoId={selectedNodoId}
         />
 
@@ -80,10 +79,8 @@ export function TableroPage({ onTriggerAlarm }) {
         />
       </div>
 
-      {/* 3. Barra Inferior */}
-      <FooterBar
-        onSync={() => alert('Sincronización local completada.')}
-      />
+      {/* 3. Barra inferior */}
+      <FooterBar />
     </div>
   );
 }

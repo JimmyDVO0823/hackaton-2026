@@ -1,0 +1,230 @@
+import React from 'react';
+import { TIPOS_SITIO } from '../config/tiposSitio.js';
+import { LIMITES_DECRETO_1886 } from '../config/limites.js';
+
+/**
+ * Tarjeta individual de nodo sensor con telemetría y estado calculado.
+ * REGLA: Nunca lee un estado escrito a mano; usa nodo.evaluacion.
+ */
+export function NodoCard({ nodo, isSelected, onTriggerAlarm }) {
+  const { id, nombre, ubicacion, tipoSitio, nivel, lectura, alarmaLocalActiva, evaluacion } = nodo;
+  const nivelRiesgo = evaluacion?.nivel ?? 'NORMAL';
+  const alertaPrincipal = evaluacion?.alertaPrincipal;
+
+  // ── Paleta por nivel ────────────────────────────────────────────────────────
+  const estilos = {
+    EVACUACION: {
+      border: 'border-l-4 border-l-[#8B3232]',
+      badgeBg: 'bg-[#8B3232]/25 border border-[#8B3232]',
+      badgeText: 'text-[#D97575]',
+      valueText: 'text-[#D97575]',
+      ch4Bg: 'bg-[#2E1A17] border-[#8B3232]/60',
+      icon: 'sos',
+      label: 'EVACUACIÓN',
+    },
+    ALARMA: {
+      border: 'border-l-4 border-l-[#B2533E]',
+      badgeBg: 'bg-[#B2533E]/20 border border-[#B2533E]/50',
+      badgeText: 'text-[#D87661]',
+      valueText: 'text-[#D87661]',
+      ch4Bg: 'bg-[#2E1A17] border-[#B2533E]/60',
+      icon: 'report',
+      label: 'ALARMA – SUSPENDER',
+    },
+    PRECAUCION: {
+      border: 'border-l-4 border-l-[#A38A3A]',
+      badgeBg: 'bg-[#A38A3A]/20 border border-[#A38A3A]/50',
+      badgeText: 'text-[#C2A855]',
+      valueText: 'text-[#C2A855]',
+      ch4Bg: 'bg-[#2A261A] border-[#A38A3A]/60',
+      icon: 'warning_amber',
+      label: 'PRECAUCIÓN',
+    },
+    SIN_SEÑAL: {
+      border: 'border-dashed border-[#5A606E]',
+      badgeBg: 'bg-surface-container-highest border border-[#2D3239]',
+      badgeText: 'text-secondary',
+      valueText: 'text-secondary',
+      ch4Bg: 'bg-surface-container-lowest border-[#2D3239]',
+      icon: 'signal_disconnected',
+      label: 'SIN SEÑAL',
+    },
+    NORMAL: {
+      border: 'border-l-4 border-l-[#4A7A5B]',
+      badgeBg: 'bg-[#4A7A5B]/20 border border-[#4A7A5B]/40',
+      badgeText: 'text-[#6DAA81]',
+      valueText: 'text-[#6DAA81]',
+      ch4Bg: 'bg-surface-container-lowest border-[#2D3239]',
+      icon: 'verified',
+      label: 'NORMAL',
+    },
+  };
+  const e = estilos[nivelRiesgo] ?? estilos.NORMAL;
+
+  // ── Límite CH4 del sitio ────────────────────────────────────────────────────
+  const tipoInfo = TIPOS_SITIO[tipoSitio];
+  const limitKey = tipoInfo?.limiteMetanoKey;
+  const limiteDato = limitKey ? LIMITES_DECRETO_1886.METANO_POR_SITIO[limitKey] : null;
+  const limiteValor = limiteDato?.limite ?? '--';
+  const limiteArticulo = LIMITES_DECRETO_1886.METANO_POR_SITIO.articulo;
+  const tipoNombre = tipoInfo?.nombre ?? tipoSitio;
+
+  // ── Tiempo desde última transmisión ────────────────────────────────────────
+  const fechaLectura = new Date(lectura?.fecha ?? 0);
+  const minutos = Math.max(0, Math.round((Date.now() - fechaLectura.getTime()) / 60000));
+  const tiempoTexto = minutos < 60 ? `Hace ${minutos} min` : 'Hace +1h';
+
+  return (
+    <article
+      id={`card-${id}`}
+      className={`flex flex-col p-3.5 bg-surface-container rounded border border-[#2D3239] ${e.border} shadow-sm transition-all ${
+        isSelected ? 'highlight-pulse ring-2 ring-[#C29B38]' : ''
+      }`}
+    >
+      {/* ── Cabecera ──────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-space-sm border-b border-[#2D3239] pb-2.5">
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`material-symbols-outlined text-[20px] ${e.valueText}`}>{e.icon}</span>
+            <h3 className="font-headline-md text-[17px] font-bold text-on-surface uppercase truncate">
+              {nombre}
+            </h3>
+            <span className="font-code-badge text-[11px] px-1.5 py-0.5 rounded bg-surface-container-high border border-[#2D3239] text-secondary shrink-0">
+              {nivel}
+            </span>
+            {alarmaLocalActiva && (
+              <span className="font-code-badge text-[10px] px-1.5 py-0.5 rounded bg-[#B2533E] text-white font-bold animate-pulse shrink-0">
+                SIRENA LOCAL
+              </span>
+            )}
+          </div>
+          <span className="font-code-badge text-[11px] text-secondary mt-0.5 truncate">
+            {ubicacion} · <strong className="text-on-surface-variant">{tipoNombre}</strong>
+          </span>
+          {alertaPrincipal?.mensaje && (
+            <span
+              className={`font-code-badge text-[11px] mt-1 ${
+                nivelRiesgo === 'EVACUACION' ? 'text-[#D97575] font-bold'
+                : nivelRiesgo === 'ALARMA'    ? 'text-[#D87661] font-semibold'
+                : e.valueText
+              }`}
+            >
+              {alertaPrincipal.mensaje}
+            </span>
+          )}
+        </div>
+
+        {/* Badge de estado */}
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded font-code-badge text-[12px] font-bold uppercase shrink-0 ${e.badgeBg} ${e.badgeText}`}>
+          <span className="material-symbols-outlined text-[16px]">{e.icon}</span>
+          <span>{e.label}</span>
+        </div>
+      </div>
+
+      {/* ── Lecturas de telemetría ────────────────────────────────────────── */}
+      {nivelRiesgo === 'SIN_SEÑAL' ? (
+        /* Mensaje especial SIN_SEÑAL */
+        <div className="flex flex-col gap-2 my-3 p-3 bg-surface-container-lowest rounded border border-dashed border-[#5A606E]">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px] text-secondary">signal_disconnected</span>
+            <span className="font-code-badge text-[12px] text-secondary font-semibold">
+              Sin transmisión · {tiempoTexto}
+            </span>
+          </div>
+          <p className="font-code-badge text-[11px] text-[#9DA3B2] leading-relaxed">
+            La alarma local del nodo (sirena + baliza) sigue protegiendo el sitio de forma autónoma.
+          </p>
+          <p className="font-code-badge text-[10px] text-secondary">
+            Último CH₄ registrado: <strong className="text-on-surface">{lectura?.ch4?.toFixed(1) ?? '--'}%</strong>
+            &nbsp;· Batería: <strong className="text-on-surface">{lectura?.bateria ?? '--'}%</strong>
+            &nbsp;· RSSI: <strong className="text-on-surface">{lectura?.rssi ?? '--'} dBm</strong>
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2 my-3">
+          {/* CH4 Metano */}
+          <div className={`flex flex-col p-2 rounded border ${e.ch4Bg}`}>
+            <span className="font-code-badge text-[11px] text-secondary">CH₄ METANO</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className={`font-telemetry-value-md text-[24px] font-bold ${e.valueText}`}>
+                {lectura?.ch4?.toFixed(1) ?? '--'}
+              </span>
+              <span className="font-telemetry-unit text-[12px] text-secondary">%Vol</span>
+            </div>
+            <span className="font-code-badge text-[10px] text-secondary mt-0.5">
+              Límite: {limiteValor}% ({limiteArticulo})
+            </span>
+          </div>
+
+          {/* Temperatura */}
+          <div className="flex flex-col p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
+            <span className="font-code-badge text-[11px] text-secondary">TEMPERATURA</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="font-telemetry-value-md text-[24px] font-bold text-on-surface">
+                {lectura?.temperatura?.toFixed(1) ?? '--'}
+              </span>
+              <span className="font-telemetry-unit text-[12px] text-secondary">°C</span>
+            </div>
+            <span className="font-code-badge text-[10px] text-secondary mt-0.5">
+              Límite por validar
+            </span>
+          </div>
+
+          {/* Humedad */}
+          <div className="flex flex-col p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
+            <span className="font-code-badge text-[11px] text-secondary">HUMEDAD</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="font-telemetry-value-md text-[24px] font-bold text-on-surface">
+                {lectura?.humedad ?? '--'}
+              </span>
+              <span className="font-telemetry-unit text-[12px] text-secondary">%</span>
+            </div>
+            <span className="font-code-badge text-[10px] text-secondary mt-0.5">Informativa</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Footer: hardware + acciones ──────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-space-sm pt-2 border-t border-[#2D3239]">
+        <div className="flex items-center gap-space-sm text-secondary font-code-badge text-[11px]">
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px]">schedule</span>
+            <span>{tiempoTexto}</span>
+          </span>
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px]">battery_std</span>
+            <span>{lectura?.bateria ?? '--'}%</span>
+          </span>
+          <span>·</span>
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px]">wifi</span>
+            <span>{lectura?.rssi ?? '--'} dBm</span>
+          </span>
+        </div>
+
+        {/* Acciones críticas */}
+        {(nivelRiesgo === 'ALARMA' || nivelRiesgo === 'EVACUACION') && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => alert(`Alarma silenciada localmente para ${nombre}.`)}
+              className="min-h-[44px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center justify-center font-action-label text-[12px] uppercase border border-[#2D3239] hover:bg-surface-variant transition-colors"
+            >
+              Silenciar
+            </button>
+            <button
+              type="button"
+              onClick={() => onTriggerAlarm(nombre)}
+              className="min-h-[44px] px-3.5 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase font-bold text-white bg-[#B2533E] hover:bg-[#c65e47] border border-[#d87661]"
+            >
+              <span className="material-symbols-outlined text-[18px]">emergency</span>
+              <span>Protocolo</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+

@@ -2,8 +2,8 @@ import React from 'react';
 
 /**
  * Barra lateral de navegación comprimible para tabletas mineras industriales.
- * - Expandida : w-72  — muestra icono + etiqueta
- * - Colapsada : w-16  — muestra solo icono (tooltip nativo al hacer hover)
+ * - Expandida : w-72  — icono + etiqueta
+ * - Colapsada : w-16  — solo icono (tooltip nativo al hacer hover)
  *
  * REGLA: layout/ contiene la barra lateral y barra superior.
  */
@@ -17,10 +17,10 @@ export function Sidebar({
   onToggleCollapse,
 }) {
   const navItems = [
-    { id: 'tablero',              label: 'Tablero',           icon: 'grid_view'  },
-    { id: 'historial',            label: 'Historial',         icon: 'history'    },
-    { id: 'alertas',              label: 'Alertas',           icon: 'warning'    },
-    { id: 'configuracion-de-mina',label: 'Configuración Mina',icon: 'settings'   },
+    { id: 'tablero',               label: 'Tablero',            icon: 'grid_view' },
+    { id: 'historial',             label: 'Historial',          icon: 'history'   },
+    { id: 'alertas',               label: 'Alertas',            icon: 'warning'   },
+    { id: 'configuracion-de-mina', label: 'Configuración Mina', icon: 'settings'  },
   ];
 
   return (
@@ -30,12 +30,10 @@ export function Sidebar({
       }`}
     >
       <div className="flex flex-col min-w-0">
-        {/* ── Cabecera ─────────────────────────────────────────────────────── */}
+        {/* ── Cabecera ────────────────────────────────────────────────── */}
         <div className="h-16 px-3 flex items-center bg-surface-container-lowest border-b border-[#2D3239] shrink-0">
-          {/* Logo / icono siempre visible */}
           <span className="material-symbols-outlined text-[#C29B38] text-[26px] shrink-0">radar</span>
 
-          {/* Texto visible solo en modo expandido */}
           <div
             className={`flex flex-col ml-3 transition-opacity duration-200 ${
               collapsed ? 'opacity-0 pointer-events-none w-0 overflow-hidden' : 'opacity-100'
@@ -49,14 +47,11 @@ export function Sidebar({
             </span>
           </div>
 
-          {/* Botón colapsar/expandir — siempre a la derecha */}
           <button
             type="button"
             onClick={onToggleCollapse}
             title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-            className={`ml-auto shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-high text-secondary hover:text-on-surface transition-colors ${
-              collapsed ? 'mx-auto ml-auto' : ''
-            }`}
+            className="ml-auto shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-high text-secondary hover:text-on-surface transition-colors"
           >
             <span className="material-symbols-outlined text-[20px]">
               {collapsed ? 'chevron_right' : 'chevron_left'}
@@ -64,15 +59,11 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* ── Control de Audio ─────────────────────────────────────────────── */}
+        {/* ── Control de Audio ────────────────────────────────────────── */}
         {!collapsed && (
           <div className="p-3 mx-2 mt-2 bg-surface-container-lowest rounded border border-[#2D3239] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
-              <span
-                className={`material-symbols-outlined text-[18px] ${
-                  audioHabilitado ? 'text-[#6DAA81]' : 'text-[#C2A855]'
-                }`}
-              >
+              <span className={`material-symbols-outlined text-[18px] ${audioHabilitado ? 'text-[#6DAA81]' : 'text-[#C2A855]'}`}>
                 {audioHabilitado ? 'volume_up' : 'volume_off'}
               </span>
               <span className="font-code-badge text-[11px] text-secondary whitespace-nowrap">
@@ -91,7 +82,6 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Icono de audio en modo colapsado */}
         {collapsed && (
           <div className="flex justify-center mt-3 shrink-0">
             <button
@@ -100,18 +90,14 @@ export function Sidebar({
               title={audioHabilitado ? 'Sonido activo' : 'Activar audio'}
               className="w-10 h-10 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors"
             >
-              <span
-                className={`material-symbols-outlined text-[22px] ${
-                  audioHabilitado ? 'text-[#6DAA81]' : 'text-[#C2A855]'
-                }`}
-              >
+              <span className={`material-symbols-outlined text-[22px] ${audioHabilitado ? 'text-[#6DAA81]' : 'text-[#C2A855]'}`}>
                 {audioHabilitado ? 'volume_up' : 'volume_off'}
               </span>
             </button>
           </div>
         )}
 
-        {/* ── Menú de navegación ───────────────────────────────────────────── */}
+        {/* ── Menú de navegación ──────────────────────────────────────── */}
         <nav className={`flex flex-col gap-1.5 mt-2 ${collapsed ? 'px-1' : 'p-space-sm'}`}>
           {navItems.map((item) => {
             const isActive = activeRoute === item.id;
@@ -147,23 +133,8 @@ export function Sidebar({
         </nav>
       </div>
 
-      {/* ── Pie: certificación y SOS ─────────────────────────────────────── */}
-      <div
-        className={`border-t border-[#2D3239] bg-surface-container-lowest flex flex-col gap-space-sm ${
-          collapsed ? 'p-2' : 'p-space-md'
-        }`}
-      >
-        {/* Info ATEX — oculta en modo colapsado */}
-        {!collapsed && (
-          <div className="flex items-center justify-between text-secondary">
-            <span className="font-code-badge text-[12px]">TAB-RUGGED-04</span>
-            <span className="font-code-badge text-[12px] text-[#A6ABB8] px-1.5 py-0.5 bg-surface-container rounded border border-[#2D3239]">
-              ATEX M1
-            </span>
-          </div>
-        )}
-
-        {/* Botón SOS */}
+      {/* ── Pie: solo botón SOS ─────────────────────────────────────── */}
+      <div className={`border-t border-[#2D3239] bg-surface-container-lowest ${collapsed ? 'p-2' : 'p-space-md'}`}>
         <button
           type="button"
           onClick={onTriggerSOS}
