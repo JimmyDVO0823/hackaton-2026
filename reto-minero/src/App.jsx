@@ -2,78 +2,31 @@ import React, { useState } from 'react';
 import { Sidebar } from './layout/Sidebar';
 import { Header } from './layout/Header';
 import { TableroPage } from './pages/TableroPage';
-import { MeasurementModal } from './components/MeasurementModal';
 import { AlarmModal } from './components/AlarmModal';
-import { useAtmosphericData } from './hooks/useAtmosphericData';
 import { useAlertas } from './hooks/useAlertas';
 
+/**
+ * Raíz de la aplicación ATMO-MONITOR.
+ * Gestiona la ruta activa, el modal de alarma y los handlers de SOS.
+ * REGLA: No contiene lógica de negocio; delega en hooks y páginas.
+ */
 export function App() {
-  const { sectors, registrarMedicion } = useAtmosphericData();
   const { audioHabilitado, habilitarAudio, dispararAlerta, silenciar } = useAlertas();
 
   const [activeRoute, setActiveRoute] = useState('tablero');
-
-  // Estados de Modales
-  const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
-  const [measurementInitialSector, setMeasurementInitialSector] = useState('');
   const [alarmModalState, setAlarmModalState] = useState({
     isOpen: false,
     sectorName: '',
     isEvacuation: false
   });
 
-  // Abrir modal de medición
-  const handleOpenMeasurement = (sectorName = '') => {
-    setMeasurementInitialSector(sectorName);
-    setIsMeasurementModalOpen(true);
-  };
-
-  // Guardar nueva medición con evaluación core y persistencia
-  const handleSaveMeasurement = async ({ sectorName, ch4, o2, co, operator }) => {
-    const { evaluacion } = await registrarMedicion({
-      sectorName,
-      ch4,
-      o2,
-      co,
-      operator
-    });
-
-    setIsMeasurementModalOpen(false);
-
-    // Disparar alertas sonoras y de voz si es necesario
-    if (evaluacion.esCritico || evaluacion.nivel === 'PRECAUCION') {
-      const gasCritico = evaluacion.alertaPrincipal?.gas || 'CO';
-      const valorCritico = evaluacion.alertaPrincipal?.valor || co;
-      dispararAlerta({
-        nivel: evaluacion.nivel,
-        gas: gasCritico,
-        valor: valorCritico,
-        sector: sectorName
-      });
-    }
-
-    alert(
-      `Medición registrada para ${sectorName}.\nNivel de riesgo evaluado: ${evaluacion.nivel}\n${
-        evaluacion.alertaPrincipal?.mensaje || 'Parámetros dentro de norma legal.'
-      }`
-    );
-  };
-
   // Disparadores de Alarma
   const handleTriggerAlarm = (sectorName) => {
-    setAlarmModalState({
-      isOpen: true,
-      sectorName,
-      isEvacuation: false
-    });
+    setAlarmModalState({ isOpen: true, sectorName, isEvacuation: false });
   };
 
   const handleTriggerSOS = () => {
-    setAlarmModalState({
-      isOpen: true,
-      sectorName: 'Mina General',
-      isEvacuation: true
-    });
+    setAlarmModalState({ isOpen: true, sectorName: 'Mina General', isEvacuation: true });
   };
 
   const handleConfirmAlarm = () => {
@@ -84,7 +37,7 @@ export function App() {
       dispararAlerta({ nivel: 'EVACUACION', gas: 'CH4', valor: 2.5, sector: 'Mina General' });
       alert('¡ALERTA DE EVACUACIÓN GENERAL EMITIDA! Sirena y protocolo de vida activados.');
     } else {
-      dispararAlerta({ nivel: 'ALARMA', gas: 'CO', valor: 30, sector: sectorName });
+      dispararAlerta({ nivel: 'ALARMA', gas: 'CH4', valor: 1.5, sector: sectorName });
       alert(
         `Protocolo de Suspensión Activado para ${sectorName}. Notificación enviada al personal de ventilación.`
       );
@@ -96,12 +49,7 @@ export function App() {
       {/* Sidebar Lateral */}
       <Sidebar
         activeRoute={activeRoute}
-        onNavigate={(route) => {
-          setActiveRoute(route);
-          if (route === 'registrar-medicion') {
-            handleOpenMeasurement();
-          }
-        }}
+        onNavigate={setActiveRoute}
         onTriggerSOS={handleTriggerSOS}
         audioHabilitado={audioHabilitado}
         onHabilitarAudio={habilitarAudio}
@@ -114,12 +62,8 @@ export function App() {
 
         {/* Contenido Principal / Pantalla Actual */}
         <main className="w-full pt-16 bg-surface min-h-screen">
-          {activeRoute === 'tablero' || activeRoute === 'registrar-medicion' ? (
-            <TableroPage
-              sectors={sectors}
-              onOpenMeasurement={handleOpenMeasurement}
-              onTriggerAlarm={handleTriggerAlarm}
-            />
+          {activeRoute === 'tablero' ? (
+            <TableroPage onTriggerAlarm={handleTriggerAlarm} />
           ) : (
             <div className="p-8 text-center text-secondary">
               <span className="material-symbols-outlined text-[48px] mb-2 block text-[#C29B38]">
@@ -129,7 +73,7 @@ export function App() {
                 Módulo en Preparación: {activeRoute.toUpperCase()}
               </h2>
               <p className="font-body-md mt-2">
-                Conforme a la estructura del hackatón, este módulo se vinculará con los repositorios locales.
+                Este módulo se vinculará con los repositorios locales en próximas fases.
               </p>
               <button
                 type="button"
@@ -143,14 +87,7 @@ export function App() {
         </main>
       </div>
 
-      {/* Modales Interactivos */}
-      <MeasurementModal
-        isOpen={isMeasurementModalOpen}
-        initialSector={measurementInitialSector}
-        onClose={() => setIsMeasurementModalOpen(false)}
-        onSave={handleSaveMeasurement}
-      />
-
+      {/* Modal de Alarma */}
       <AlarmModal
         isOpen={alarmModalState.isOpen}
         sectorName={alarmModalState.sectorName}

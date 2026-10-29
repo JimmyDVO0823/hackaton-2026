@@ -1,128 +1,145 @@
 /**
- * Datos de ejemplo iniciales para el simulador y modo offline
+ * Datos fijos de 6 nodos sensores con el modelo definido en la skill:
+ * { id, nombre, ubicacion, tipoSitio, nivel, mapCoords, lectura: { ch4, temperatura, humedad, bateria, rssi, fecha }, alarmaLocalActiva }
+ * Las fechas son relativas a "ahora" para que siempre se vean recientes.
  */
 
-export const SECTORES_EJEMPLO = [
-  {
-    id: 'retorno-principal',
-    name: 'Retorno Principal',
-    description: 'GALERÍA RETORNO · SECTOR SUR · COTA -420M',
-    status: 'ALARMA',
-    statusBadge: 'ALARMA · SUSPENDER',
-    warningText: 'Límite norma: 25 ppm superado',
-    telemetry: {
-      ch4: { label: 'CH₄ METANO', value: '0.3', unit: '%Vol', statusText: 'Seguro (<1.0%)', isAlert: false },
-      o2: { label: 'O₂ OXÍGENO', value: '19.8', unit: '%Vol', statusText: 'Apto (>19.5%)', isAlert: false },
-      co: { label: 'CO MONÓXIDO', value: '30', unit: 'PPM', statusText: 'Crítico (>25)', isAlert: true }
-    },
-    lastMeasurement: {
-      timeAgo: 'Hace 8 min (14:32)',
-      operator: 'Op. J. Gómez'
-    },
-    mapCoords: {
-      right: '3rem',
-      bottom: '5rem'
-    }
-  },
-  {
-    id: 'frente-explotacion-1',
-    name: 'Frente de Explotación 1',
-    description: 'TAJO PRINCIPAL · SECTOR NORTE · COTA -425M',
-    status: 'PRECAUCION',
-    statusBadge: 'PRECAUCIÓN',
-    warningText: 'Cota -425m · Tajo mecanizado',
-    telemetry: {
-      ch4: { label: 'CH₄ METANO', value: '0.8', unit: '%Vol', statusText: 'Elevado (>0.5%)', isAlert: true },
-      o2: { label: 'O₂ OXÍGENO', value: '20.4', unit: '%Vol', statusText: 'Óptimo', isAlert: false },
-      co: { label: 'CO MONÓXIDO', value: '12', unit: 'PPM', statusText: 'Bajo control', isAlert: false }
-    },
-    lastMeasurement: {
-      timeAgo: 'Hace 18 min (14:22)',
-      operator: 'Op. M. Duarte'
-    },
-    mapCoords: {
-      right: '1.5rem',
-      top: '7rem'
-    }
-  },
-  {
-    id: 'tambor-3',
-    name: 'Tambor 3',
-    description: 'PILAR SUR · ZONA DE RECUPERACIÓN',
-    status: 'PENDIENTE',
-    statusBadge: 'FUERA DE TIEMPO',
-    pendingAlert: {
-      elapsed: 'Sin medir hace 2 h 15 min',
-      limitText: 'Límite legal: Máximo 2 horas continuas',
-      lastRound: '12:17 (T1)'
-    },
-    mapCoords: {
-      left: '2.5rem',
-      bottom: '4rem'
-    }
-  },
-  {
-    id: 'galeria-transporte',
-    name: 'Galería de Transporte',
-    description: 'VÍA FÉRREA NIVEL 2 · SECTOR CENTRAL',
-    status: 'NORMAL',
-    statusBadge: 'NORMAL',
-    telemetry: {
-      ch4: { label: 'CH₄', value: '0.1', unit: '%', statusText: 'Estable', isAlert: false },
-      o2: { label: 'O₂', value: '20.9', unit: '%', statusText: 'Estable', isAlert: false },
-      co: { label: 'CO', value: '4', unit: 'PPM', statusText: 'Estable', isAlert: false }
-    },
-    lastMeasurement: {
-      timeAgo: 'Hace 35 min (14:05)',
-      operator: 'Op. J. Gómez'
-    },
-    statusNote: 'Parámetros estables',
-    mapCoords: {
-      left: '36%',
-      bottom: '3.5rem'
-    }
-  },
-  {
-    id: 'inyeccion-aire',
-    name: 'Inyección de Aire (Nivel 2)',
-    description: 'VENTILADOR PRINCIPAL SUR',
-    status: 'NORMAL',
-    statusBadge: 'NORMAL',
-    telemetry: {
-      ch4: { label: 'CH₄', value: '0.0', unit: '%', statusText: 'Estable', isAlert: false },
-      o2: { label: 'O₂', value: '21.0', unit: '%', statusText: 'Estable', isAlert: false },
-      co: { label: 'CO', value: '0', unit: 'PPM', statusText: 'Estable', isAlert: false }
-    },
-    lastMeasurement: {
-      timeAgo: 'Hace 42 min',
-      operator: 'Automático'
-    },
-    statusNote: 'Caudal: 1420 m³/min',
-    mapCoords: {
-      left: '33%',
-      top: '3.5rem'
-    }
-  },
-  {
-    id: 'tunel-acceso',
-    name: 'Túnel Acceso Principal',
-    description: 'COTA -400M · ACCESO PRINCIPAL',
-    status: 'NORMAL',
-    statusBadge: 'NORMAL',
-    telemetry: {
-      ch4: { label: 'CH₄', value: '0.0', unit: '%', statusText: 'Estable', isAlert: false },
-      o2: { label: 'O₂', value: '20.9', unit: '%', statusText: 'Estable', isAlert: false },
-      co: { label: 'CO', value: '2', unit: 'PPM', statusText: 'Estable', isAlert: false }
-    },
-    lastMeasurement: {
-      timeAgo: 'Hace 50 min',
-      operator: 'Op. R. Morales'
-    },
-    statusNote: 'Cota -400m',
-    mapCoords: {
-      left: '1.5rem',
-      top: '4rem'
-    }
-  }
-];
+export function obtenerNodosEjemplo(ahora = new Date()) {
+  const t = ahora instanceof Date ? ahora.getTime() : new Date(ahora).getTime();
 
+  return [
+    // 1. Frente de explotación 1 (N-2): CH4 0.7% -> PRECAUCION (límite 1.0%, 0.7 >= 0.5)
+    {
+      id: 'frente-explotacion-1',
+      nombre: 'Frente de Explotación 1',
+      ubicacion: 'Sector Norte · Tajo mecanizado',
+      tipoSitio: 'frente_explotacion',
+      nivel: 'N-2',
+      mapCoords: {
+        right: '1.5rem',
+        top: '7rem'
+      },
+      lectura: {
+        ch4: 0.7,
+        temperatura: 26.5,
+        humedad: 78,
+        bateria: 85,
+        rssi: -68,
+        fecha: new Date(t - 1 * 60 * 1000).toISOString() // hace 1 min
+      },
+      alarmaLocalActiva: false
+    },
+
+    // 2. Retorno de tajo (N-2): CH4 1.2% -> PRECAUCION (su límite es 1.5%, 1.2 >= 0.75 y < 1.5)
+    {
+      id: 'retorno-tajo',
+      nombre: 'Retorno de Tajo',
+      ubicacion: 'Sector Sur · Galería de retorno de tajo',
+      tipoSitio: 'retorno_tajos',
+      nivel: 'N-2',
+      mapCoords: {
+        right: '6rem',
+        top: '12rem'
+      },
+      lectura: {
+        ch4: 1.2,
+        temperatura: 27.2,
+        humedad: 82,
+        bateria: 92,
+        rssi: -72,
+        fecha: new Date(t - 2 * 60 * 1000).toISOString() // hace 2 min
+      },
+      alarmaLocalActiva: false
+    },
+
+    // 3. Retorno principal (N-2): CH4 1.1% -> ALARMA, alarma local activa (límite 1.0%, 1.1 >= 1.0)
+    {
+      id: 'retorno-principal',
+      nombre: 'Retorno Principal',
+      ubicacion: 'Galería Retorno · Sector Sur · Cota -420m',
+      tipoSitio: 'retorno_principal',
+      nivel: 'N-2',
+      mapCoords: {
+        right: '3rem',
+        bottom: '5rem'
+      },
+      lectura: {
+        ch4: 1.1,
+        temperatura: 28.0,
+        humedad: 84,
+        bateria: 79,
+        rssi: -65,
+        fecha: new Date(t - 1 * 60 * 1000).toISOString() // hace 1 min
+      },
+      alarmaLocalActiva: true
+    },
+
+    // 4. Frente de avance (N-3): sin transmitir hace 12 min -> SIN_SEÑAL (límite: 5 min)
+    {
+      id: 'frente-avance',
+      nombre: 'Frente de Avance',
+      ubicacion: 'Nivel 3 · Cota -540m · Galería Sur',
+      tipoSitio: 'frente_avance',
+      nivel: 'N-3',
+      mapCoords: {
+        left: '2.5rem',
+        bottom: '4rem'
+      },
+      lectura: {
+        ch4: 0.2,
+        temperatura: 24.1,
+        humedad: 70,
+        bateria: 64,
+        rssi: -88,
+        fecha: new Date(t - 12 * 60 * 1000).toISOString() // hace 12 min
+      },
+      alarmaLocalActiva: false
+    },
+
+    // 5. Retorno de preparación (N-1): CH4 0.3% -> NORMAL (límite 1.5%, 0.3 < 0.75)
+    {
+      id: 'retorno-preparacion',
+      nombre: 'Retorno de Preparación',
+      ubicacion: 'Nivel 1 · Cota -310m · Galería Este',
+      tipoSitio: 'retorno_preparacion',
+      nivel: 'N-1',
+      mapCoords: {
+        left: '33%',
+        top: '3.5rem'
+      },
+      lectura: {
+        ch4: 0.3,
+        temperatura: 23.5,
+        humedad: 68,
+        bateria: 95,
+        rssi: -62,
+        fecha: new Date(t - 3 * 60 * 1000).toISOString() // hace 3 min
+      },
+      alarmaLocalActiva: false
+    },
+
+    // 6. Frente de explotación 2 (N-1): CH4 0.2% -> NORMAL (límite 1.0%, 0.2 < 0.5)
+    {
+      id: 'frente-explotacion-2',
+      nombre: 'Frente de Explotación 2',
+      ubicacion: 'Nivel 1 · Cota -310m · Frente Norte',
+      tipoSitio: 'frente_explotacion',
+      nivel: 'N-1',
+      mapCoords: {
+        left: '36%',
+        bottom: '3.5rem'
+      },
+      lectura: {
+        ch4: 0.2,
+        temperatura: 22.8,
+        humedad: 65,
+        bateria: 90,
+        rssi: -60,
+        fecha: new Date(t - 2 * 60 * 1000).toISOString() // hace 2 min
+      },
+      alarmaLocalActiva: false
+    }
+  ];
+}
+
+export const NODOS_EJEMPLO = obtenerNodosEjemplo();

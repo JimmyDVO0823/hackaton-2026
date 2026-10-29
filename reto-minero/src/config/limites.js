@@ -1,9 +1,13 @@
 /**
  * Límites normativos oficiales según Decreto 1886 de 2015 (Reglamento de Seguridad en las Labores Mineras Subterráneas de Colombia).
- * REGLA: Los límites normativos viven ÚNICAMENTE en este archivo, referenciando su artículo respectivo.
+ * REGLA: Ningún componente o evaluador escribe límites a mano. Todo se lee de este archivo.
  */
 
 export const LIMITES_DECRETO_1886 = {
+  // Constantes de monitoreo de telemetría
+  SIN_SEÑAL_MINUTOS: 5,
+  UMBRAL_PRECAUCION: 0.5, // 50% del límite normativo según skill.md
+
   // Oxígeno (Art. 38): Debe encontrarse entre 19.5% y 23.5% en volumen
   OXIGENO: {
     articulo: 'Art. 38',
@@ -21,7 +25,7 @@ export const LIMITES_DECRETO_1886 = {
     H2S: { twa: 1, stel: 5, unidad: 'PPM', nombre: 'Ácido Sulfhídrico' },
     SO2: { twa: null, stel: 0.25, unidad: 'PPM', nombre: 'Dióxido de Azufre' },
     NO: { twa: 25, stel: null, unidad: 'PPM', nombre: 'Óxido Nítrico' },
-    NO2: { twa: null, stel: 0.2, unidad: 'PPM', nombre: 'Dióxido de Nitrógeno' }
+    NO2: { twa: 0.2, stel: null, unidad: 'PPM', nombre: 'Dióxido de Nitrógeno' }
   },
 
   // Metano (CH4) según tipo de labor/sitio (Art. 53 y Art. 162)
@@ -33,6 +37,21 @@ export const LIMITES_DECRETO_1886 = {
     retorno_preparacion: { limite: 1.5, unidad: '%Vol', descripcion: 'Retorno de frentes de preparación y desarrollo (30% LEL)' },
     limite_voladura: { limite: 0.5, articulo: 'Art. 162', unidad: '%Vol', descripcion: 'Prohibición de voladura con 0.5% o más' },
     limite_evacuacion: { limite: 2.0, articulo: 'Art. 53', unidad: '%Vol', descripcion: 'Por encima de 2% solo ingresa personal de salvamento' }
+  },
+
+  // Temperatura ambiente subterránea (configurable, marcada "por validar")
+  TEMPERATURA: {
+    maximo: 32,
+    estado: 'por validar',
+    unidad: '°C',
+    nota: 'Límite pendiente de validar con integrante de Ingeniería de Minas.'
+  },
+
+  // Humedad relativa ambiente (informativa)
+  HUMEDAD: {
+    unidad: '%',
+    tipo: 'informativa',
+    descripcion: 'Humedad relativa en corriente de aire subterránea'
   },
 
   // Categorías de mina (Art. 58) y frecuencia mínima de medición (Art. 60)
@@ -59,17 +78,9 @@ export const LIMITES_DECRETO_1886 = {
   // Caudal mínimo de ventilación (Art. 54)
   CAUDAL_VENTILACION: {
     articulo: 'Art. 54',
-    por_trabajador_bajo_1500m: 3.0, // m³/min
-    por_trabajador_sobre_1500m: 6.0, // m³/min
-    diesel_hp_co_bajo: 4.0, // m³/min por HP si CO exosto <= 0.08%
-    diesel_hp_co_alto: 6.0  // m³/min por HP si CO exosto <= 0.12%
-  },
-
-  // Temperatura ambiente subterránea (pendiente de validar con especialista minero)
-  TEMPERATURA: {
-    estado: 'por validar',
-    unidad: '°C',
-    nota: 'Límite pendiente de validar con integrante de Ingeniería de Minas.'
+    por_trabajador_bajo_1500m: 3.0,
+    por_trabajador_sobre_1500m: 6.0,
+    diesel_hp_co_bajo: 4.0,
+    diesel_hp_co_alto: 6.0
   }
 };
-

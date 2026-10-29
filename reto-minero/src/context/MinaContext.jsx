@@ -1,6 +1,5 @@
 /* oxlint-disable react/only-export-components */
-import React, { createContext, useState, useEffect } from 'react';
-import { minaRepo } from '../data/mina.repo.js';
+import React, { createContext, useState } from 'react';
 
 export const MinaContext = createContext(null);
 
@@ -10,26 +9,13 @@ export function MinaProvider({ children }) {
     cota: 'COTA -420M · SECTOR GALERÍA SUR',
     categoria: 'II',
     turno: 'Turno 2 (14:00 - 22:00)',
-    operador: 'Ing. C. Mendoza',
-    sinConexion: true
+    operador: 'Ing. C. Mendoza'
   });
 
   const [alertasActivas, setAlertasActivas] = useState([]);
 
-  useEffect(() => {
-    minaRepo
-      .obtenerConfiguracion()
-      .then((cfg) => {
-        if (cfg) {
-          setConfigMina((prev) => ({ ...prev, ...cfg }));
-        }
-      })
-      .catch(console.warn);
-  }, []);
-
-  const actualizarConfiguracion = async (nuevaCfg) => {
+  const actualizarConfiguracion = (nuevaCfg) => {
     setConfigMina((prev) => ({ ...prev, ...nuevaCfg }));
-    await minaRepo.guardarConfiguracion(nuevaCfg);
   };
 
   const agregarAlertaActiva = (alerta) => {

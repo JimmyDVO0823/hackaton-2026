@@ -1,24 +1,23 @@
 import React from 'react';
 
 /**
- * Resumen KPI superior de estados de sectores mineros
+ * Resumen KPI superior: conteo de nodos por nivel de evaluación normativa.
+ * REGLA: Solo recibe nodos con evaluacion calculada; nunca estados escritos a mano.
  */
-export function KpiSummary({ sectors = [], activeFilter = null, onFilterSelect }) {
-  const normalCount = sectors.filter(s => s.status === 'NORMAL').length;
-  const precCount = sectors.filter(s => s.status === 'PRECAUCION').length;
-  const alarmaCount = sectors.filter(s => s.status === 'ALARMA').length;
-  const pendCount = sectors.filter(s => s.status === 'PENDIENTE').length;
+export function KpiSummary({ nodos = [], activeFilter = null, onFilterSelect }) {
+  const normalCount    = nodos.filter(n => n.evaluacion?.nivel === 'NORMAL').length;
+  const precCount      = nodos.filter(n => n.evaluacion?.nivel === 'PRECAUCION').length;
+  const alarmaCount    = nodos.filter(n =>
+    n.evaluacion?.nivel === 'ALARMA' || n.evaluacion?.nivel === 'EVACUACION'
+  ).length;
+  const sinSenalCount  = nodos.filter(n => n.evaluacion?.nivel === 'SIN_SEÑAL').length;
 
-  const handleToggle = (status) => {
-    if (activeFilter === status) {
-      onFilterSelect(null); // Quitar filtro
-    } else {
-      onFilterSelect(status);
-    }
+  const handleToggle = (nivel) => {
+    onFilterSelect(activeFilter === nivel ? null : nivel);
   };
 
   return (
-    <section aria-label="Resumen de Estados de Sectores" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+    <section aria-label="Resumen de Estados de Nodos" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
       {/* 1. NORMAL */}
       <button
         type="button"
@@ -40,7 +39,7 @@ export function KpiSummary({ sectors = [], activeFilter = null, onFilterSelect }
           <span className="font-telemetry-value-lg text-[32px] font-bold leading-none text-[#6DAA81]">
             {String(normalCount).padStart(2, '0')}
           </span>
-          <span className="font-code-badge text-[11px] text-secondary">SECTORES</span>
+          <span className="font-code-badge text-[11px] text-secondary">NODOS</span>
         </div>
       </button>
 
@@ -54,7 +53,7 @@ export function KpiSummary({ sectors = [], activeFilter = null, onFilterSelect }
       >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-[#A38A3A]/15 border border-[#A38A3A]/40 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px] text-[#C2A855]">warning</span>
+            <span className="material-symbols-outlined text-[22px] text-[#C2A855]">warning_amber</span>
           </div>
           <div className="flex flex-col">
             <span className="font-code-badge text-[11px] text-secondary uppercase tracking-wider">GAS ELEVADO</span>
@@ -65,11 +64,11 @@ export function KpiSummary({ sectors = [], activeFilter = null, onFilterSelect }
           <span className="font-telemetry-value-lg text-[32px] font-bold leading-none text-[#C2A855]">
             {String(precCount).padStart(2, '0')}
           </span>
-          <span className="font-code-badge text-[11px] text-secondary">SECTOR</span>
+          <span className="font-code-badge text-[11px] text-secondary">NODOS</span>
         </div>
       </button>
 
-      {/* 3. ALARMA CRÍTICA */}
+      {/* 3. ALARMA / EVACUACIÓN */}
       <button
         type="button"
         onClick={() => handleToggle('ALARMA')}
@@ -83,42 +82,41 @@ export function KpiSummary({ sectors = [], activeFilter = null, onFilterSelect }
           </div>
           <div className="flex flex-col">
             <span className="font-code-badge text-[11px] text-[#D87661] uppercase tracking-wider">INTERRUPCIÓN</span>
-            <span className="font-action-label text-[16px] font-bold text-on-surface">ALARMA (LABOR)</span>
+            <span className="font-action-label text-[16px] font-bold text-on-surface">ALARMA / EVAC.</span>
           </div>
         </div>
         <div className="flex flex-col items-end">
           <span className="font-telemetry-value-lg text-[32px] font-bold leading-none text-[#D87661]">
             {String(alarmaCount).padStart(2, '0')}
           </span>
-          <span className="font-code-badge text-[11px] text-secondary">SUSPENDIDO</span>
+          <span className="font-code-badge text-[11px] text-secondary">NODOS</span>
         </div>
       </button>
 
-      {/* 4. MEDICIONES PENDIENTES */}
+      {/* 4. SIN SEÑAL */}
       <button
         type="button"
-        onClick={() => handleToggle('PENDIENTE')}
+        onClick={() => handleToggle('SIN_SEÑAL')}
         className={`group flex items-center justify-between min-h-[72px] p-3.5 bg-surface-container rounded border border-[#2D3239] border-l-4 border-l-[#7A7F8C] text-left transition-all active:scale-[0.99] hover:bg-surface-container-high ${
-          activeFilter === 'PENDIENTE' ? 'ring-2 ring-[#7A7F8C] bg-surface-container-high' : ''
+          activeFilter === 'SIN_SEÑAL' ? 'ring-2 ring-[#7A7F8C] bg-surface-container-high' : ''
         }`}
       >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded bg-surface-container-highest border border-[#2D3239] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px] text-secondary">pending_actions</span>
+            <span className="material-symbols-outlined text-[22px] text-secondary">signal_disconnected</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-code-badge text-[11px] text-secondary uppercase tracking-wider">NORMATIVA</span>
-            <span className="font-action-label text-[16px] font-bold text-on-surface">PENDIENTES</span>
+            <span className="font-code-badge text-[11px] text-secondary uppercase tracking-wider">TELEMETRÍA</span>
+            <span className="font-action-label text-[16px] font-bold text-on-surface">SIN SEÑAL</span>
           </div>
         </div>
         <div className="flex flex-col items-end">
           <span className="font-telemetry-value-lg text-[32px] font-bold leading-none text-secondary">
-            {String(pendCount).padStart(2, '0')}
+            {String(sinSenalCount).padStart(2, '0')}
           </span>
-          <span className="font-code-badge text-[11px] text-secondary">&gt;2 HORAS</span>
+          <span className="font-code-badge text-[11px] text-secondary">NODOS</span>
         </div>
       </button>
     </section>
   );
 }
-

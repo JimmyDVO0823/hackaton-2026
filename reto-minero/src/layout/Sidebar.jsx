@@ -7,7 +7,6 @@ import React from 'react';
 export function Sidebar({ activeRoute = 'tablero', onNavigate, onTriggerSOS, audioHabilitado = false, onHabilitarAudio }) {
   const navItems = [
     { id: 'tablero', label: 'Tablero', icon: 'grid_view' },
-    { id: 'registrar-medicion', label: 'Registrar Medición', icon: 'science' },
     { id: 'historial', label: 'Historial', icon: 'history' },
     { id: 'alertas', label: 'Alertas', icon: 'warning' },
     { id: 'configuracion-de-mina', label: 'Configuración Mina', icon: 'settings' }

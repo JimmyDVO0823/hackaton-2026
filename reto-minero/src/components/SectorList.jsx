@@ -2,16 +2,16 @@ import React from 'react';
 import { SectorCard } from './SectorCard';
 
 /**
- * Contenedor de la columna derecha de telemetría de sectores con buscador
+ * Columna derecha: lista de tarjetas de nodos con buscador y filtros.
+ * REGLA: Recibe nodos con evaluacion calculada; nunca lee estado manual.
  */
 export function SectorList({
-  sectors = [],
+  nodos = [],
   searchTerm = '',
   onSearchChange,
   onResetFilters,
-  selectedSectorId,
-  onTriggerAlarm,
-  onRegisterMeasurement
+  selectedNodoId,
+  onTriggerAlarm
 }) {
   return (
     <section className="lg:col-span-5 flex flex-col gap-space-md">
@@ -23,7 +23,7 @@ export function SectorList({
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar galería o gas (ej. CO, Tambor)..."
+            placeholder="Buscar nodo, galería o estado (ej. ALARMA, Retorno)..."
             className="w-full bg-transparent text-on-surface placeholder:text-secondary font-body-md text-[14px] focus:outline-none"
           />
         </div>
@@ -39,10 +39,10 @@ export function SectorList({
 
       {/* Lista desplazable con tarjetas */}
       <div className="flex flex-col gap-space-md max-h-[640px] overflow-y-auto pr-1">
-        {sectors.length === 0 ? (
+        {nodos.length === 0 ? (
           <div className="p-8 text-center bg-surface-container rounded border border-[#2D3239] text-secondary">
             <span className="material-symbols-outlined text-[36px] mb-2 block">search_off</span>
-            <p className="font-action-label text-[14px]">No se encontraron sectores coincidentes</p>
+            <p className="font-action-label text-[14px]">No se encontraron nodos coincidentes</p>
             <button
               type="button"
               onClick={onResetFilters}
@@ -52,13 +52,12 @@ export function SectorList({
             </button>
           </div>
         ) : (
-          sectors.map((sector) => (
+          nodos.map((nodo) => (
             <SectorCard
-              key={sector.id}
-              sector={sector}
-              isSelected={selectedSectorId === sector.id}
+              key={nodo.id}
+              nodo={nodo}
+              isSelected={selectedNodoId === nodo.id}
               onTriggerAlarm={onTriggerAlarm}
-              onRegisterMeasurement={onRegisterMeasurement}
             />
           ))
         )}
@@ -66,4 +65,3 @@ export function SectorList({
     </section>
   );
 }
-
