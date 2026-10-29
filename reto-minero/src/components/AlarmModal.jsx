@@ -249,15 +249,19 @@ export function AlarmModal() {
         {/* Métricas reales */}
         <div className="grid grid-cols-2 gap-2.5 p-3 rounded bg-surface-container-lowest border border-[#2D3239]">
           <div>
-            <span className="font-code-badge text-[11px] text-secondary">METANO (CH₄) MEDIDO</span>
+            <span className="font-code-badge text-[11px] text-secondary">
+              {alertaModal.gas ? `${alertaModal.gas} MEDIDO` : 'CONCENTRACIÓN MEDIDA'}
+            </span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="font-telemetry-value-md text-[24px] font-bold text-[#D87661]">
-                {typeof alertaModal.valor === 'number' ? alertaModal.valor.toFixed(1) : alertaModal.valor}%
+                {typeof alertaModal.valor === 'number' ? alertaModal.valor.toFixed(1) : alertaModal.valor}
               </span>
-              <span className="font-telemetry-unit text-[12px] text-secondary">Vol</span>
+              <span className="font-telemetry-unit text-[12px] text-secondary">
+                {alertaModal.unidad || (alertaModal.gas === 'CH4' ? '%Vol' : '')}
+              </span>
             </div>
             <span className="font-code-badge text-[10px] text-secondary">
-              Límite legal: {alertaModal.limite}%
+              Límite de seguridad: {alertaModal.limite} {alertaModal.unidad || (alertaModal.gas === 'CH4' ? '%Vol' : '')}
             </span>
           </div>
 

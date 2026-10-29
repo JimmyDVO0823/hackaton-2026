@@ -88,6 +88,8 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
       co2: r.co2,
       temperatura: r.temperatura,
       humedad: r.humedad,
+      pm25: r.pm25,
+      pm10: r.pm10,
       nodo: r.nombreNodo,
     }));
   }, [lecturasFiltradas, filtroVariable]);
@@ -218,6 +220,32 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
       articulo: 'Informativa',
       tipo: 'informativa',
     },
+    pm25: {
+      nombre: 'Polvo Respirable (PM2.5)',
+      unidad: 'µg/m³',
+      color: '#F97316',
+      stroke: '#FB923C',
+      min: 0,
+      max: 80,
+      limite: 50,
+      articulo: 'Límite Seguridad: 50 µg/m³',
+      precaucionMin: 35,
+      precaucionMax: 50,
+      tipo: 'limite_superior',
+    },
+    pm10: {
+      nombre: 'Polvo Inhalable (PM10)',
+      unidad: 'µg/m³',
+      color: '#EA580C',
+      stroke: '#F97316',
+      min: 0,
+      max: 200,
+      limite: 150,
+      articulo: 'Límite Seguridad: 150 µg/m³',
+      precaucionMin: 100,
+      precaucionMax: 150,
+      tipo: 'limite_superior',
+    },
   }[filtroVariable] || {};
 
   return (
@@ -326,6 +354,10 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
               <option value="h2s">Ácido Sulfhídrico — H₂S (PPM)</option>
               <option value="nox">Gases Nitrosos — NO/NO₂ (PPM)</option>
               <option value="co2">Dióxido de Carbono — CO₂ (PPM)</option>
+            </optgroup>
+            <optgroup label="Material Particulado (Polvo de Carbón)">
+              <option value="pm25">Polvo Respirable — PM2.5 (µg/m³)</option>
+              <option value="pm10">Polvo Inhalable — PM10 (µg/m³)</option>
             </optgroup>
             <optgroup label="Parámetros Físicos">
               <option value="temperatura">Temperatura (°C)</option>
@@ -611,6 +643,9 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                 <th className="p-2.5">H₂S (ppm)</th>
                 <th className="p-2.5">NOx (ppm)</th>
                 <th className="p-2.5">CO₂ (ppm)</th>
+                <th className="p-2.5">PM2.5 (µg/m³)</th>
+                <th className="p-2.5">PM10 (µg/m³)</th>
+                <th className="p-2.5">Tendencia Polvo</th>
                 <th className="p-2.5">Temp (°C)</th>
                 <th className="p-2.5">Estado Normativo</th>
               </tr>
@@ -674,6 +709,26 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
                       </td>
                       <td className="p-2.5 font-code-badge text-[12px] text-on-surface">
                         {r.co2 ?? 450}
+                      </td>
+                      <td className="p-2.5 font-code-badge text-[12px] font-bold text-on-surface">
+                        {r.pm25 != null ? `${r.pm25.toFixed(1)}` : '--'}
+                      </td>
+                      <td className="p-2.5 font-code-badge text-[12px] font-bold text-on-surface">
+                        {r.pm10 != null ? `${r.pm10.toFixed(1)}` : '--'}
+                      </td>
+                      <td className="p-2.5">
+                        <span className={`px-1.5 py-0.5 rounded font-code-badge text-[10px] font-bold flex items-center gap-1 w-fit ${
+                          r.aumentoSostenidoPm25 || (r.pm25 ?? 0) >= 50
+                            ? 'bg-[#B2533E]/20 text-[#D87661] border border-[#B2533E]/40'
+                            : r.tendenciaPm25 === 'AUMENTANDO'
+                            ? 'bg-[#A38A3A]/20 text-[#C2A855] border border-[#A38A3A]/40'
+                            : r.tendenciaPm25 === 'DISMINUYENDO'
+                            ? 'bg-[#4A7A5B]/20 text-[#6DAA81] border border-[#4A7A5B]/40'
+                            : 'bg-surface-container-high text-secondary'
+                        }`}>
+                          <span>{r.tendenciaPm25 === 'AUMENTANDO' ? '↗' : r.tendenciaPm25 === 'DISMINUYENDO' ? '↘' : '→'}</span>
+                          <span>{r.aumentoSostenidoPm25 ? 'Aum. Sostenido' : (r.tendenciaPm25 || 'Estable')}</span>
+                        </span>
                       </td>
                       <td className="p-2.5 font-code-badge text-[12px] text-secondary">
                         {r.temperatura.toFixed(1)}°

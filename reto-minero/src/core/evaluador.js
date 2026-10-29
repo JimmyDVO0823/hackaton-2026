@@ -97,6 +97,73 @@ export function evaluarNodo(nodo, ahora = new Date()) {
     });
   }
 
+  // 4. Evaluación de Material Particulado (PM2.5 y PM10)
+  const limParticulado = LIMITES_DECRETO_1886.MATERIAL_PARTICULADO;
+  if (limParticulado) {
+    const pm25 = nodo?.lectura?.pm25;
+    const pm10 = nodo?.lectura?.pm10;
+    const aumentoSostenidoPm25 = nodo?.lectura?.aumentoSostenidoPm25 || nodo?.lectura?.tendenciaPm25 === 'AUMENTANDO_SOSTENIDO';
+    const aumentoSostenidoPm10 = nodo?.lectura?.aumentoSostenidoPm10 || nodo?.lectura?.tendenciaPm10 === 'AUMENTANDO_SOSTENIDO';
+
+    // PM2.5 - Límite de seguridad alcanzado -> ALARMA
+    if (pm25 != null && pm25 >= limParticulado.PM25.limiteSeguridad) {
+      alertas.push({
+        tipo: 'POLVO_PM25',
+        nivel: 'ALARMA',
+        gas: 'PM2.5',
+        valor: pm25,
+        limite: limParticulado.PM25.limiteSeguridad,
+        unidad: limParticulado.PM25.unidad,
+        articulo: limParticulado.articulo,
+        mensaje: `Límite de polvo respirable PM2.5 superado (${pm25} µg/m³ >= ${limParticulado.PM25.limiteSeguridad} µg/m³).`,
+        accion: 'Activar sistemas de supresión de polvo, verificar uso obligatorio de protección respiratoria e intensificar caudal de ventilación.'
+      });
+    } else if (pm25 != null && (pm25 >= limParticulado.PM25.umbralPrecaucion || aumentoSostenidoPm25)) {
+      alertas.push({
+        tipo: 'POLVO_PM25',
+        nivel: 'PRECAUCION',
+        gas: 'PM2.5',
+        valor: pm25,
+        limite: limParticulado.PM25.limiteSeguridad,
+        unidad: limParticulado.PM25.unidad,
+        articulo: limParticulado.articulo,
+        mensaje: aumentoSostenidoPm25
+          ? `Alerta preventiva: Aumento sostenido de polvo PM2.5 (${pm25} µg/m³). Tendencia creciente continua.`
+          : `Polvo respirable PM2.5 en rango de precaución (${pm25} µg/m³ >= ${limParticulado.PM25.umbralPrecaucion} µg/m³).`,
+        accion: 'Encender aspersores de agua en el frente y vigilar cortina de aire.'
+      });
+    }
+
+    // PM10 - Límite de seguridad alcanzado -> ALARMA
+    if (pm10 != null && pm10 >= limParticulado.PM10.limiteSeguridad) {
+      alertas.push({
+        tipo: 'POLVO_PM10',
+        nivel: 'ALARMA',
+        gas: 'PM10',
+        valor: pm10,
+        limite: limParticulado.PM10.limiteSeguridad,
+        unidad: limParticulado.PM10.unidad,
+        articulo: limParticulado.articulo,
+        mensaje: `Límite de polvo inhalable PM10 superado (${pm10} µg/m³ >= ${limParticulado.PM10.limiteSeguridad} µg/m³).`,
+        accion: 'Suspender temporalmente operaciones de trituración/cargue y verificar captadores de polvo.'
+      });
+    } else if (pm10 != null && (pm10 >= limParticulado.PM10.umbralPrecaucion || aumentoSostenidoPm10)) {
+      alertas.push({
+        tipo: 'POLVO_PM10',
+        nivel: 'PRECAUCION',
+        gas: 'PM10',
+        valor: pm10,
+        limite: limParticulado.PM10.limiteSeguridad,
+        unidad: limParticulado.PM10.unidad,
+        articulo: limParticulado.articulo,
+        mensaje: aumentoSostenidoPm10
+          ? `Alerta preventiva: Aumento sostenido de polvo PM10 (${pm10} µg/m³). Tendencia creciente continua.`
+          : `Polvo inhalable PM10 en rango de precaución (${pm10} µg/m³ >= ${limParticulado.PM10.umbralPrecaucion} µg/m³).`,
+        accion: 'Verificar humectación de vías de acarreo y funcionamiento de ventilación secundaria.'
+      });
+    }
+  }
+
   // Determinar severidad máxima
   let nivelMaximo = 'NORMAL';
   let alertaPrincipal = null;

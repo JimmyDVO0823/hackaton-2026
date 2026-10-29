@@ -3,6 +3,7 @@ import { KpiSummary } from '../components/KpiSummary';
 import { MineMap } from '../components/MineMap';
 import { SectorList } from '../components/SectorList';
 import { FooterBar } from '../layout/FooterBar';
+import { ZonasPolvoPanel } from '../components/ZonasPolvoPanel';
 import { useNodos } from '../hooks/useNodos';
 import { useAlertasContext } from '../context/AlertasContext.jsx';
 
@@ -142,7 +143,14 @@ export function TableroPage({
         />
       </div>
 
-      {/* 3. Barra inferior */}
+      {/* 3. Panel de Identificación de Zonas con Monitoreo de Polvo (PM2.5 / PM10) */}
+      <ZonasPolvoPanel
+        nodos={nodos}
+        onSelectNodo={handleSelectNodo}
+        onVerHistorial={onVerHistorial}
+      />
+
+      {/* 4. Barra inferior */}
       <FooterBar />
     </div>
   );

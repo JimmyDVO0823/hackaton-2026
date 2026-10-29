@@ -82,5 +82,28 @@ export const LIMITES_DECRETO_1886 = {
     por_trabajador_sobre_1500m: 6.0,
     diesel_hp_co_bajo: 4.0,
     diesel_hp_co_alto: 6.0
+  },
+
+  // Material Particulado / Polvo de Carbón (Higiene Ocupacional y Seguridad Minera)
+  MATERIAL_PARTICULADO: {
+    articulo: 'Higiene Minera / Dec. 1886',
+    PM25: {
+      nombre: 'Polvo Respirable (PM2.5)',
+      unidad: 'µg/m³',
+      limiteSeguridad: 50.0,       // Límite de Alarma de seguridad
+      umbralPrecaucion: 35.0,      // Umbral preventivo de precaución
+      umbralVariacionMinima: 1.5,  // Variación en µg/m³ para considerar cambio real
+      lecturasSostenidasAlerta: 3, // Mediciones consecutivas en alza para disparar alerta
+      descripcion: 'Fracción respirable capaz de penetrar alvéolos pulmonares.'
+    },
+    PM10: {
+      nombre: 'Polvo Inhalable (PM10)',
+      unidad: 'µg/m³',
+      limiteSeguridad: 150.0,      // Límite de Alarma de seguridad
+      umbralPrecaucion: 100.0,     // Umbral preventivo de precaución
+      umbralVariacionMinima: 3.0,  // Variación en µg/m³ para considerar cambio real
+      lecturasSostenidasAlerta: 3, // Mediciones consecutivas en alza para disparar alerta
+      descripcion: 'Fracción torácica e inhalable generada en arranque y transporte.'
+    }
   }
 };

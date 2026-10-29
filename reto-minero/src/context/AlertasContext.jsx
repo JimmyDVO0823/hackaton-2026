@@ -44,17 +44,25 @@ export function AlertasProvider({ children }) {
         const limitKey = tipoInfo?.limiteMetanoKey;
         const limiteDato = limitKey ? LIMITES_DECRETO_1886.METANO_POR_SITIO[limitKey] : null;
 
+        const ap = evaluacion.alertaPrincipal;
+        const gas = ap?.gas || 'CH4';
+        const valor = ap?.valor ?? (nodo.lectura?.ch4 ?? 0);
+        const limite = ap?.limite ?? (limiteDato?.limite ?? 1.0);
+        const unidad = ap?.unidad || (gas === 'CH4' ? '%Vol' : (gas.startsWith('PM') ? 'µg/m³' : 'PPM'));
+        const articulo = ap?.articulo || LIMITES_DECRETO_1886.METANO_POR_SITIO.articulo;
+
         iniciales.push({
           id: `alerta-${nodo.id}`,
           nodoId: nodo.id,
           nombre: nodo.nombre,
           nivel: evaluacion.nivel,
-          gas: 'CH4',
-          valor: nodo.lectura?.ch4 ?? 0,
-          limite: limiteDato?.limite ?? 1.0,
-          articulo: LIMITES_DECRETO_1886.METANO_POR_SITIO.articulo,
+          gas,
+          valor,
+          limite,
+          unidad,
+          articulo,
           accion:
-            evaluacion.alertaPrincipal?.accion ||
+            ap?.accion ||
             'Suspender inmediatamente las labores del sector y evacuar hacia corriente de aire fresco.',
           hora: new Date(nodo.lectura?.fecha ?? Date.now()).toLocaleTimeString('es-CO', {
             hour: '2-digit',

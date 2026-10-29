@@ -3,9 +3,11 @@
  * REGLAS:
  * - Determinista: SIN Math.random().
  * - Una lectura cada 10 minutos (144 intervalos por nodo).
- * - Mediciones multigas completas: CH4, O2, CO, H2S, NOx, CO2, Temperatura y Humedad.
+ * - Mediciones multigas y material particulado completas:
+ *   CH4, O2, CO, H2S, NOx, CO2, PM2.5, PM10, Temperatura y Humedad.
  * - Los sensores están conectados permanentemente a la red eléctrica (SIN batería).
- * - Retorno Principal N-2: CH4 sube de 0,4% a 1,1% en las últimas 2 h (ALARMA).
+ * - Retorno Principal N-2: CH4 sube de 0,4% a 1,1% en las últimas 2 h (ALARMA), PM2.5 supera 50 µg/m³.
+ * - Frente de Explotación 1 N-2: aumento sostenido de polvo PM2.5 (de 24 a 42 µg/m³).
  * - Frente de Avance N-3: subida a 0,9% entre las 03:00 y las 04:30 y bajada tras ventilar.
  * - Nodo SIN_SEÑAL (Frente de Avance): deja de tener lecturas desde su última transmisión (hace 12 min).
  */
@@ -27,6 +29,8 @@ export const NODOS_METADATA = [
     baseH2s: 0.30,
     baseNox: 0.07,
     baseCo2: 1200,
+    basePm25: 28.0,
+    basePm10: 80.0,
   },
   {
     id: 'frente-explotacion-1',
@@ -42,6 +46,8 @@ export const NODOS_METADATA = [
     baseH2s: 0.15,
     baseNox: 0.04,
     baseCo2: 680,
+    basePm25: 22.0,
+    basePm10: 65.0,
   },
   {
     id: 'retorno-tajo',
@@ -57,6 +63,8 @@ export const NODOS_METADATA = [
     baseH2s: 0.25,
     baseNox: 0.05,
     baseCo2: 950,
+    basePm25: 32.0,
+    basePm10: 88.0,
   },
   {
     id: 'frente-avance',
@@ -72,6 +80,8 @@ export const NODOS_METADATA = [
     baseH2s: 0.08,
     baseNox: 0.03,
     baseCo2: 480,
+    basePm25: 18.0,
+    basePm10: 45.0,
   },
   {
     id: 'retorno-preparacion',
@@ -87,6 +97,8 @@ export const NODOS_METADATA = [
     baseH2s: 0.08,
     baseNox: 0.02,
     baseCo2: 520,
+    basePm25: 22.0,
+    basePm10: 60.0,
   },
   {
     id: 'frente-explotacion-2',
@@ -102,6 +114,8 @@ export const NODOS_METADATA = [
     baseH2s: 0.04,
     baseNox: 0.01,
     baseCo2: 430,
+    basePm25: 16.0,
+    basePm10: 42.0,
   },
 ];
 
@@ -164,6 +178,109 @@ function calcularCh4Determinista(nodoId, timestamp, minutosAtras) {
 }
 
 /**
+ * Calcula deterministamente la concentración y tendencia de PM2.5 y PM10.
+ */
+function calcularPolvoDeterminista(nodoId, timestamp, minutosAtras) {
+  switch (nodoId) {
+    case 'frente-explotacion-1': {
+      // Evento: aumento sostenido en las últimas horas debido a operación continua de arranque
+      if (minutosAtras <= 50) {
+        const progreso = (50 - minutosAtras) / 50; // 0 a 1
+        const pm25 = 24.0 + 18.0 * progreso; // sube hasta 42 µg/m³
+        const pm10 = 68.0 + 52.0 * progreso; // sube hasta 120 µg/m³
+        return {
+          pm25: Number(pm25.toFixed(1)),
+          pm10: Number(pm10.toFixed(1)),
+          tendencia: 'AUMENTANDO',
+          aumentoSostenido: minutosAtras <= 30,
+        };
+      }
+      const osc = 1.5 * Math.sin(minutosAtras * 0.08);
+      return {
+        pm25: Number((22.0 + osc).toFixed(1)),
+        pm10: Number((65.0 + osc * 2.5).toFixed(1)),
+        tendencia: 'ESTABLE',
+        aumentoSostenido: false,
+      };
+    }
+
+    case 'retorno-principal': {
+      // Evento crítico: aumento sostenido que sobrepasa límite de seguridad (54 µg/m³ y 165 µg/m³)
+      if (minutosAtras <= 120) {
+        const progreso = (120 - minutosAtras) / 120;
+        const pm25 = 28.0 + 26.0 * Math.pow(progreso, 1.2);
+        const pm10 = 80.0 + 85.0 * Math.pow(progreso, 1.2);
+        return {
+          pm25: Number(pm25.toFixed(1)),
+          pm10: Number(pm10.toFixed(1)),
+          tendencia: 'AUMENTANDO',
+          aumentoSostenido: true,
+        };
+      }
+      const osc = 2.0 * Math.cos(minutosAtras * 0.05);
+      return {
+        pm25: Number((28.0 + osc).toFixed(1)),
+        pm10: Number((80.0 + osc * 2).toFixed(1)),
+        tendencia: 'ESTABLE',
+        aumentoSostenido: false,
+      };
+    }
+
+    case 'retorno-preparacion': {
+      // Evento: concentración disminuyendo tras activación de aspersión de agua (de 38 a 22 µg/m³)
+      if (minutosAtras <= 90) {
+        const progreso = (90 - minutosAtras) / 90;
+        const pm25 = 38.0 - 16.0 * progreso;
+        const pm10 = 95.0 - 35.0 * progreso;
+        return {
+          pm25: Number(pm25.toFixed(1)),
+          pm10: Number(pm10.toFixed(1)),
+          tendencia: 'DISMINUYENDO',
+          aumentoSostenido: false,
+        };
+      }
+      return {
+        pm25: 35.0,
+        pm10: 90.0,
+        tendencia: 'ESTABLE',
+        aumentoSostenido: false,
+      };
+    }
+
+    case 'frente-avance': {
+      const osc = 1.5 * Math.sin(minutosAtras * 0.06);
+      return {
+        pm25: Number((18.0 + osc).toFixed(1)),
+        pm10: Number((45.0 + osc * 2).toFixed(1)),
+        tendencia: 'ESTABLE',
+        aumentoSostenido: false,
+      };
+    }
+
+    case 'retorno-tajo': {
+      const osc = 2.0 * Math.cos(minutosAtras * 0.07);
+      return {
+        pm25: Number((32.0 + osc).toFixed(1)),
+        pm10: Number((88.0 + osc * 2).toFixed(1)),
+        tendencia: 'ESTABLE',
+        aumentoSostenido: false,
+      };
+    }
+
+    case 'frente-explotacion-2':
+    default: {
+      const osc = 1.2 * Math.sin(minutosAtras * 0.05);
+      return {
+        pm25: Number((16.0 + osc).toFixed(1)),
+        pm10: Number((42.0 + osc * 2).toFixed(1)),
+        tendencia: 'ESTABLE',
+        aumentoSostenido: false,
+      };
+    }
+  }
+}
+
+/**
  * Genera el conjunto de lecturas de las últimas 24 horas para todos los nodos.
  * @param {Date|number} fechaReferencia
  * @returns {Array<Object>} Lista plana de lecturas ordenadas cronológicamente
@@ -188,6 +305,7 @@ export function generarHistorial24h(fechaReferencia = new Date()) {
       }
 
       const ch4 = calcularCh4Determinista(meta.id, t, minutosAtras);
+      const polvo = calcularPolvoDeterminista(meta.id, t, minutosAtras);
 
       // Variación determinista suave para temperatura y humedad
       const variacionTemp = 0.4 * Math.sin((paso + meta.limite * 10) * 0.1);
@@ -216,7 +334,15 @@ export function generarHistorial24h(fechaReferencia = new Date()) {
         {
           id: meta.id,
           tipoSitio: meta.tipoSitio,
-          lectura: { ch4, temperatura, fecha: fechaIso },
+          lectura: {
+            ch4,
+            temperatura,
+            fecha: fechaIso,
+            pm25: polvo.pm25,
+            pm10: polvo.pm10,
+            aumentoSostenidoPm25: polvo.aumentoSostenido,
+            aumentoSostenidoPm10: polvo.aumentoSostenido,
+          },
         },
         new Date(t)
       );
@@ -239,6 +365,12 @@ export function generarHistorial24h(fechaReferencia = new Date()) {
         h2s,
         nox,
         co2,
+        pm25: polvo.pm25,
+        pm10: polvo.pm10,
+        tendenciaPm25: polvo.tendencia,
+        tendenciaPm10: polvo.tendencia,
+        aumentoSostenidoPm25: polvo.aumentoSostenido,
+        aumentoSostenidoPm10: polvo.aumentoSostenido,
         temperatura,
         humedad,
         alertaNivel: evaluacion.nivel,

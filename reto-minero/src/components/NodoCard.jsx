@@ -234,6 +234,69 @@ export function NodoCard({
               <span className="font-code-badge text-[11px] font-bold text-on-surface">{lectura?.co2 ?? 450} <span className="text-[8px] font-normal text-secondary">ppm</span></span>
             </div>
           </div>
+
+          {/* Medición Continua de Polvo: PM2.5 y PM10 con Detección de Tendencia */}
+          <div className="grid grid-cols-2 gap-2 p-2 bg-surface-container-lowest rounded border border-[#2D3239]">
+            {/* PM2.5 Respirable */}
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between">
+                <span className="font-code-badge text-[10px] text-secondary uppercase font-semibold">PM2.5 (Respirable)</span>
+                <span className={`font-code-badge text-[10px] px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5 ${
+                  lectura?.aumentoSostenidoPm25 || (lectura?.pm25 ?? 0) >= 50
+                    ? 'bg-[#B2533E]/20 text-[#D87661] border border-[#B2533E]/40'
+                    : lectura?.tendenciaPm25 === 'AUMENTANDO'
+                    ? 'bg-[#A38A3A]/20 text-[#C2A855] border border-[#A38A3A]/40'
+                    : lectura?.tendenciaPm25 === 'DISMINUYENDO'
+                    ? 'bg-[#4A7A5B]/20 text-[#6DAA81] border border-[#4A7A5B]/40'
+                    : 'bg-surface-container-high text-secondary border border-[#2D3239]'
+                }`}>
+                  <span className="material-symbols-outlined text-[13px]">
+                    {lectura?.tendenciaPm25 === 'AUMENTANDO' ? 'trending_up' : lectura?.tendenciaPm25 === 'DISMINUYENDO' ? 'trending_down' : 'trending_flat'}
+                  </span>
+                  <span>{lectura?.aumentoSostenidoPm25 ? 'Aum. Sostenido' : (lectura?.tendenciaPm25 || 'Estable')}</span>
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className={`font-telemetry-value-md text-[18px] font-bold ${
+                  (lectura?.pm25 ?? 0) >= 50 ? 'text-[#D87661]' : (lectura?.pm25 ?? 0) >= 35 ? 'text-[#C2A855]' : 'text-on-surface'
+                }`}>
+                  {lectura?.pm25 != null ? lectura.pm25.toFixed(1) : '--'}
+                </span>
+                <span className="font-telemetry-unit text-[11px] text-secondary">µg/m³</span>
+                <span className="font-code-badge text-[9px] text-secondary ml-auto">Lím: 50</span>
+              </div>
+            </div>
+
+            {/* PM10 Inhalable */}
+            <div className="flex flex-col border-l border-[#2D3239] pl-2">
+              <div className="flex items-center justify-between">
+                <span className="font-code-badge text-[10px] text-secondary uppercase font-semibold">PM10 (Inhalable)</span>
+                <span className={`font-code-badge text-[10px] px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5 ${
+                  lectura?.aumentoSostenidoPm10 || (lectura?.pm10 ?? 0) >= 150
+                    ? 'bg-[#B2533E]/20 text-[#D87661] border border-[#B2533E]/40'
+                    : lectura?.tendenciaPm10 === 'AUMENTANDO'
+                    ? 'bg-[#A38A3A]/20 text-[#C2A855] border border-[#A38A3A]/40'
+                    : lectura?.tendenciaPm10 === 'DISMINUYENDO'
+                    ? 'bg-[#4A7A5B]/20 text-[#6DAA81] border border-[#4A7A5B]/40'
+                    : 'bg-surface-container-high text-secondary border border-[#2D3239]'
+                }`}>
+                  <span className="material-symbols-outlined text-[13px]">
+                    {lectura?.tendenciaPm10 === 'AUMENTANDO' ? 'trending_up' : lectura?.tendenciaPm10 === 'DISMINUYENDO' ? 'trending_down' : 'trending_flat'}
+                  </span>
+                  <span>{lectura?.aumentoSostenidoPm10 ? 'Aum. Sostenido' : (lectura?.tendenciaPm10 || 'Estable')}</span>
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className={`font-telemetry-value-md text-[18px] font-bold ${
+                  (lectura?.pm10 ?? 0) >= 150 ? 'text-[#D87661]' : (lectura?.pm10 ?? 0) >= 100 ? 'text-[#C2A855]' : 'text-on-surface'
+                }`}>
+                  {lectura?.pm10 != null ? lectura.pm10.toFixed(1) : '--'}
+                </span>
+                <span className="font-telemetry-unit text-[11px] text-secondary">µg/m³</span>
+                <span className="font-code-badge text-[9px] text-secondary ml-auto">Lím: 150</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
