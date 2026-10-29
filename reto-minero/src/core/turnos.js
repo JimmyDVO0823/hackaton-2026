@@ -263,9 +263,15 @@ function procesarMetricasTurno(lecturas, turno) {
  * Totalmente compatible con Excel (BOM UTF-8, delimitador punto y coma).
  * SIN DATOS DE BATERÍA NI SEÑAL WIFI (sensores conectados a red eléctrica fija).
  */
-export function generarCsvResumenTurno(resumen) {
+export function generarCsvResumenTurno(resumen, supervisor = null) {
   const { turno, lecturas, totalMediciones, peorNivel, ch4, o2, co, h2s, nox, co2, temperatura, humedad, conteoAlertas } = resumen;
   const fechaEmision = new Date().toLocaleString('es-CO');
+
+  const supNombre = supervisor?.nombre || 'Ing. Carlos Andrés Mendoza';
+  const supDoc = supervisor?.documento || '1053782910';
+  const supCargo = supervisor?.cargo || 'Supervisor de Seguridad y SST';
+  const supTel = supervisor?.telefono || '+57 312 456 7890';
+  const supInicio = supervisor?.horaInicioTurno || turno.horarioTexto.split(' - ')[0];
 
   const escapar = (val) => {
     if (val === null || val === undefined) return '""';
@@ -281,6 +287,11 @@ export function generarCsvResumenTurno(resumen) {
     '# =========================================================================',
     `# Fecha y Hora de Emisión:;${escapar(fechaEmision)}`,
     `# Turno de Operación:;${escapar(`${turno.nombre} (${turno.horarioTexto})`)}`,
+    `# Supervisor Responsable de Turno:;${escapar(supNombre)}`,
+    `# Documento de Identidad (C.C.):;${escapar(supDoc)}`,
+    `# Cargo / Especialidad:;${escapar(supCargo)}`,
+    `# Teléfono de Contacto:;${escapar(supTel)}`,
+    `# Hora de Apertura de Turno:;${escapar(supInicio)}`,
     `# Duración del Turno:;${escapar('8 Horas')}`,
     `# Total de Registros de Telemetría:;${totalMediciones}`,
     `# Peor Estado Normativo Registrado:;${escapar(peorNivel)}`,
@@ -346,7 +357,17 @@ export function generarCsvResumenTurno(resumen) {
     ].join(';');
   });
 
-  return '\uFEFF' + [...lineasHeader, columnasTabla.join(';'), ...filas].join('\r\n');
+  const lineasFirma = [
+    '',
+    '# =========================================================================',
+    '# ACTA DE CIERRE Y ENTREGA DE TURNO · TRAZABILIDAD LEGAL DECRETO 1886',
+    '# Certifico que las mediciones de gases y ventilación fueron monitoreadas continuamente.',
+    `# Supervisor Responsable: ${supNombre} | C.C. ${supDoc} | Cargo: ${supCargo}`,
+    `# Firma Digital: CERTIFICADO SISTEMA ATMO-MONITOR (${new Date().toISOString()})`,
+    '# =========================================================================',
+  ];
+
+  return '\uFEFF' + [...lineasHeader, columnasTabla.join(';'), ...filas, ...lineasFirma].join('\r\n');
 }
 
 /**

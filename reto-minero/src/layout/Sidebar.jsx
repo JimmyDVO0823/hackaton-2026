@@ -12,12 +12,12 @@ export function Sidebar({
   onTriggerSOS,
   bocinaActiva = false,
   onToggleBocina,
-  audioHabilitado = false,
+  _audioHabilitado = false,
   onHabilitarAudio,
   collapsed = false,
   onToggleCollapse,
 }) {
-  const isBocinaOn = bocinaActiva || audioHabilitado;
+  const isBocinaOn = Boolean(bocinaActiva);
   const handleToggle = onToggleBocina || onHabilitarAudio;
 
   const navItems = [

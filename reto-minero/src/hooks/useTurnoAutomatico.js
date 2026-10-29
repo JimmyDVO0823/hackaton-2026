@@ -16,7 +16,7 @@ const STORAGE_KEY_ULTIMO_TURNO = 'atmo_ultimo_turno_descargado';
  * - Descarga automáticamente el CSV al finalizar cada turno.
  * - Provee control manual para descargar el turno actual o simular el cierre de turno.
  */
-export function useTurnoAutomatico(onNotificacion) {
+export function useTurnoAutomatico(onNotificacion, supervisorTurno = null) {
   const [infoTurnos, setInfoTurnos] = useState(() => obtenerInfoTurnos());
   const ultimoTurnoIdRef = useRef(infoTurnos.turnoActual.id);
 
@@ -25,13 +25,13 @@ export function useTurnoAutomatico(onNotificacion) {
     const ahora = Date.now();
     const historial = generarHistorial24h(ahora);
     const resumen = calcularResumenTurno(historial, turno);
-    const csv = generarCsvResumenTurno(resumen);
+    const csv = generarCsvResumenTurno(resumen, supervisorTurno);
 
     const fechaStr = new Date().toISOString().split('T')[0];
     const nombre = `resumen-turno-${turno.id}_${fechaStr}.csv`;
     const ok = descargarArchivoCsv(csv, nombre);
 
-    // Guardar registro histórico del turno en IndexedDB
+    // Guardar registro histórico del turno en IndexedDB con trazabilidad del supervisor
     try {
       turnosRepo.guardar({
         id: `turno-${turno.id}-${fechaStr}-${Date.now().toString().slice(-4)}`,
@@ -39,6 +39,7 @@ export function useTurnoAutomatico(onNotificacion) {
         nombre: turno.nombre,
         fecha: fechaStr,
         generadoEn: new Date().toISOString(),
+        supervisor: supervisorTurno,
         resumen,
       }).catch(() => {});
     } catch {
@@ -52,7 +53,7 @@ export function useTurnoAutomatico(onNotificacion) {
       onNotificacion?.(msg, 'success');
     }
     return ok;
-  }, [onNotificacion]);
+  }, [onNotificacion, supervisorTurno]);
 
   // Verificar periódicamente el tiempo y el cambio de turno cada 5 segundos
   useEffect(() => {

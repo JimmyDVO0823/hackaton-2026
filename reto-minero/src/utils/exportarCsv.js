@@ -79,13 +79,14 @@ export function exportarLecturasCsv(lecturas = [], nombreArchivo = 'telemetria-m
  * Genera y descarga el resumen completo del turno indicado (o del turno actual).
  * @param {Array<Object>} historial - Lista de mediciones
  * @param {Object} [turnoEspecifico] - Información de turno opcional
+ * @param {Object} [supervisor] - Datos del supervisor de turno para trazabilidad legal
  */
-export function exportarResumenTurno(historial = [], turnoEspecifico = null) {
+export function exportarResumenTurno(historial = [], turnoEspecifico = null, supervisor = null) {
   const { turnoActual } = obtenerInfoTurnos();
   const turno = turnoEspecifico || turnoActual;
 
   const resumen = calcularResumenTurno(historial, turno);
-  const csvContenido = generarCsvResumenTurno(resumen);
+  const csvContenido = generarCsvResumenTurno(resumen, supervisor);
 
   const fechaIso = new Date().toISOString().split('T')[0];
   const nombreArchivo = `resumen-turno-${turno.id}_${fechaIso}.csv`;

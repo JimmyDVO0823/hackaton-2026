@@ -18,9 +18,11 @@ export function TableroPage({
   bocinaGlobalActiva: bocinaGlobalActivaProp,
   onBocinaGlobal: onBocinaGlobalProp,
   onVerHistorial,
+  onAbrirIniciarTurno,
 }) {
   const { nodos } = useNodos();
   const { audioHabilitado, habilitarAudio } = useAlertasContext();
+  const handleIniciarTurno = onAbrirIniciarTurno || habilitarAudio;
 
   const [activeFilter, setActiveFilter]     = useState(null);
   const [searchTerm, setSearchTerm]         = useState('');
@@ -95,11 +97,11 @@ export function TableroPage({
 
           <button
             type="button"
-            onClick={habilitarAudio}
+            onClick={handleIniciarTurno}
             className="min-h-[44px] px-5 bg-[#C2A855] hover:bg-[#d6bc68] text-black font-action-label text-[13px] uppercase font-black rounded transition-all shadow-md active:scale-98 flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-[20px]">volume_up</span>
-            <span>Iniciar turno / activar sonido</span>
+            <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
+            <span>Iniciar turno / Asignar supervisor</span>
           </button>
         </section>
       )}

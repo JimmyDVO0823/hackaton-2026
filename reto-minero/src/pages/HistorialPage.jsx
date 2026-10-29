@@ -17,6 +17,7 @@ import {
 import { exportarLecturasCsv, exportarResumenTurno } from '../utils/exportarCsv.js';
 import { obtenerInfoTurnos } from '../core/turnos.js';
 import { useToast } from '../components/Toast.jsx';
+import { useMina } from '../hooks/useMina.js';
 
 /**
  * Pantalla de Historial con Gráfico de Tendencias Multigas y Tabla de Auditoría.
@@ -29,6 +30,7 @@ import { useToast } from '../components/Toast.jsx';
  */
 export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
   const { mostrarToast } = useToast();
+  const { supervisorTurno } = useMina();
   const [ahora] = useState(() => Date.now());
 
   // Generar datos deterministas de 24 horas
@@ -110,7 +112,7 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
   };
 
   const handleDescargarResumenTurno = () => {
-    const ok = exportarResumenTurno(todoHistorial, infoTurnos.turnoActual);
+    const ok = exportarResumenTurno(todoHistorial, infoTurnos.turnoActual, supervisorTurno);
     if (ok) {
       mostrarToast(`Resumen oficial de ${infoTurnos.turnoActual.nombre} descargado exitosamente`, 'success');
     }
@@ -239,7 +241,7 @@ export function HistorialPage({ initialNodoId = null, onVolverTablero }) {
               </div>
             </div>
             <span className="font-code-badge text-[12px] text-secondary mt-0.5">
-              Monitoreo continuo 24 h · Muestreo cada 10 min · Decreto 1886 de 2015
+              Monitoreo continuo 24 h · Muestreo cada 10 min · Decreto 1886 de 2015 · Supervisor: {supervisorTurno?.nombre || 'Ing. Supervisor'} (C.C. {supervisorTurno?.documento || 'S/D'})
             </span>
           </div>
         </div>

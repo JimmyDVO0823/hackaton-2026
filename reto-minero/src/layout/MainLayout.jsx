@@ -8,9 +8,10 @@ import { Sidebar } from './Sidebar';
  *
  * REGLA: layout/ contiene la estructura de navegación y barras fijas.
  */
-export function MainLayout({ children, sidebarProps, turnoProps }) {
+export function MainLayout({ children, sidebarProps, turnoProps, supervisorProps }) {
   const [collapsed, setCollapsed] = useState(false);
   const { turnoActual, descargarTurnoActual, simularFinDeTurno } = turnoProps || {};
+  const { supervisorTurno, onAbrirIniciarTurno } = supervisorProps || {};
 
   return (
     <div className="bg-surface text-on-surface font-body-md select-none min-h-screen">
@@ -32,7 +33,7 @@ export function MainLayout({ children, sidebarProps, turnoProps }) {
           style={{ left: collapsed ? '4rem' : '18rem' }}
         >
           {/* Widget de Turno de Operación Minera (Turnos de 8 horas) */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {turnoActual && (
               <div
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-[#2D3239]"
@@ -50,6 +51,48 @@ export function MainLayout({ children, sidebarProps, turnoProps }) {
                   </span>
                 </div>
               </div>
+            )}
+
+            {/* Widget de Supervisor Responsable y Trazabilidad */}
+            {supervisorTurno && (
+              <div
+                className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-[#2D3239]"
+                title={`Supervisor Responsable: ${supervisorTurno.nombre} · C.C. ${supervisorTurno.documento} · ${supervisorTurno.cargo}`}
+              >
+                <div className="w-6 h-6 rounded bg-[#C29B38]/20 flex items-center justify-center shrink-0 border border-[#C29B38]/40">
+                  <span className="material-symbols-outlined text-[15px] text-[#E0B853]">badge</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-action-label text-[11px] font-bold text-on-surface truncate max-w-[160px] leading-tight">
+                    {supervisorTurno.nombre}
+                  </span>
+                  <span className="font-code-badge text-[10px] text-secondary">
+                    C.C. {supervisorTurno.documento}
+                  </span>
+                </div>
+                {onAbrirIniciarTurno && (
+                  <button
+                    type="button"
+                    onClick={onAbrirIniciarTurno}
+                    title="Cambiar supervisor o registrar traspaso formal de turno"
+                    className="p-1 hover:bg-surface-container-high rounded text-secondary hover:text-[#E0B853] transition-colors ml-0.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">edit</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Botón destacado si aún no se ha iniciado el turno */}
+            {onAbrirIniciarTurno && !supervisorTurno?.iniciado && (
+              <button
+                type="button"
+                onClick={onAbrirIniciarTurno}
+                className="min-h-[36px] px-3 bg-[#C29B38] hover:bg-[#d4aa3e] text-[#121417] font-bold rounded flex items-center gap-1.5 font-action-label text-[11px] uppercase shadow-sm active:scale-98"
+              >
+                <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
+                <span>Iniciar Turno</span>
+              </button>
             )}
           </div>
 

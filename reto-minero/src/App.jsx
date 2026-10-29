@@ -7,24 +7,29 @@ import { AlarmModal } from './components/AlarmModal';
 import { ToastProvider, useToast } from './components/Toast.jsx';
 import { AlertasProvider, useAlertasContext } from './context/AlertasContext.jsx';
 import { useTurnoAutomatico } from './hooks/useTurnoAutomatico.js';
+import { useMina } from './hooks/useMina.js';
+import { ModalIniciarTurno } from './components/ModalIniciarTurno.jsx';
 
 function AppContent() {
   const {
     audioHabilitado,
     habilitarAudio,
+    silenciar,
     abrirConfirmEvacuacion,
     abrirModalAlerta,
     alertas,
   } = useAlertasContext();
 
   const { mostrarToast } = useToast();
+  const { supervisorTurno } = useMina();
+  const [modalIniciarTurnoOpen, setModalIniciarTurnoOpen] = useState(false);
 
   // Gestión de turnos de 8h y descarga automática de resumen CSV
   const {
     turnoActual,
     descargarTurnoActual,
     simularFinDeTurno,
-  } = useTurnoAutomatico((msg, tipo) => mostrarToast(msg, tipo));
+  } = useTurnoAutomatico((msg, tipo) => mostrarToast(msg, tipo), supervisorTurno);
 
   const [activeRoute, setActiveRoute] = useState('tablero');
   const [historialNodoId, setHistorialNodoId] = useState(null);
@@ -48,16 +53,17 @@ function AppContent() {
   }, []);
 
   const handleToggleBocinaSidebar = useCallback(() => {
-    if (!audioHabilitado) {
-      habilitarAudio?.();
-    }
     if (hayBocinaActiva) {
       setBocinaGlobalActiva(false);
       setBocinasActivas({});
+      silenciar?.();
     } else {
+      if (!audioHabilitado) {
+        habilitarAudio?.();
+      }
       setBocinaGlobalActiva(true);
     }
-  }, [hayBocinaActiva, audioHabilitado, habilitarAudio]);
+  }, [hayBocinaActiva, audioHabilitado, habilitarAudio, silenciar]);
 
   // Disparar modal de alarma para un sector/nodo específico desde la lista
   const handleTriggerAlarm = useCallback((sectorName) => {
@@ -108,6 +114,7 @@ function AppContent() {
           bocinaGlobalActiva={bocinaGlobalActiva}
           onBocinaGlobal={handleBocinaGlobal}
           onVerHistorial={handleVerHistorial}
+          onAbrirIniciarTurno={() => setModalIniciarTurnoOpen(true)}
         />
       );
     }
@@ -153,12 +160,26 @@ function AppContent() {
 
   return (
     <>
-      <MainLayout sidebarProps={sidebarProps} turnoProps={turnoProps}>
+      <MainLayout
+        sidebarProps={sidebarProps}
+        turnoProps={turnoProps}
+        supervisorProps={{
+          supervisorTurno,
+          onAbrirIniciarTurno: () => setModalIniciarTurnoOpen(true),
+        }}
+      >
         {renderContent()}
       </MainLayout>
 
       {/* Modal unificado de Alarma y Evacuación */}
       <AlarmModal />
+
+      {/* Modal de Registro de Supervisor y Apertura de Turno */}
+      <ModalIniciarTurno
+        isOpen={modalIniciarTurnoOpen}
+        onClose={() => setModalIniciarTurnoOpen(false)}
+        onTurnoIniciado={habilitarAudio}
+      />
     </>
   );
 }
