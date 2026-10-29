@@ -13,11 +13,12 @@ export function SectorList({
   onResetFilters,
   selectedNodoId,
   onSelectNodo,
-  _onTriggerAlarm,
+  onTriggerAlarm: _onTriggerAlarm,
   bocinasActivas = {},
   onToggleBocina,
   onBocinaGlobal,
   bocinaGlobalActiva = false,
+  onVerHistorial,
 }) {
   const [mostrarTodos, setMostrarTodos] = useState(false);
 
@@ -86,20 +87,22 @@ export function SectorList({
         </div>
 
         {/* Control de bocina global */}
-        <button
-          type="button"
-          onClick={onBocinaGlobal}
-          className={`min-h-[44px] w-full flex items-center justify-center gap-2 rounded font-action-label text-[13px] uppercase border transition-colors ${
-            bocinaGlobalActiva
-              ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
-              : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            {bocinaGlobalActiva ? 'volume_up' : 'volume_off'}
-          </span>
-          <span>{bocinaGlobalActiva ? 'Bocina Global ACTIVA — clic para apagar' : 'Activar Bocina Global (todos los sitios)'}</span>
-        </button>
+        {onBocinaGlobal && (
+          <button
+            type="button"
+            onClick={onBocinaGlobal}
+            className={`min-h-[44px] w-full flex items-center justify-center gap-2 rounded font-action-label text-[13px] uppercase border transition-colors ${
+              bocinaGlobalActiva
+                ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
+                : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {bocinaGlobalActiva ? 'volume_up' : 'volume_off'}
+            </span>
+            <span>{bocinaGlobalActiva ? 'Bocina Global ACTIVA — clic para apagar' : 'Activar Bocina Global (todos los sitios)'}</span>
+          </button>
+        )}
       </div>
 
       {/* Lista de tarjetas */}
@@ -140,6 +143,7 @@ export function SectorList({
                 isSelected={selectedNodoId === nodo.id}
                 onActivarBocina={onToggleBocina}
                 bocinaActiva={bocinaGlobalActiva || !!bocinasActivas[nodo.id]}
+                onVerHistorial={onVerHistorial}
               />
             </div>
           ))

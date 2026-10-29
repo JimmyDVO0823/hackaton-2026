@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { MainLayout } from './layout/MainLayout';
 import { TableroPage } from './pages/TableroPage';
+import { HistorialPage } from './pages/HistorialPage';
 import { AlarmModal } from './components/AlarmModal';
 import { ToastProvider } from './components/Toast.jsx';
 import { AlertasProvider, useAlertasContext } from './context/AlertasContext.jsx';
@@ -15,6 +16,7 @@ function AppContent() {
   } = useAlertasContext();
 
   const [activeRoute, setActiveRoute] = useState('tablero');
+  const [historialNodoId, setHistorialNodoId] = useState(null);
 
   // ── Bocinas sincronizadas (Sitios específicos + Global) ──────────────────────
   const [bocinasActivas, setBocinasActivas] = useState({});
@@ -52,16 +54,27 @@ function AppContent() {
     if (alertaEncontrada) {
       abrirModalAlerta(alertaEncontrada);
     } else {
-      // Abre modal con datos reales si existe o de confirmación general
       abrirConfirmEvacuacion();
     }
   }, [alertas, abrirModalAlerta, abrirConfirmEvacuacion]);
 
+  // Navegar a Historial filtrando por un nodo específico desde su tarjeta
+  const handleVerHistorial = useCallback((nodoId) => {
+    setHistorialNodoId(nodoId);
+    setActiveRoute('historial');
+  }, []);
+
   // Props del Sidebar
   const sidebarProps = {
     activeRoute,
-    onNavigate: setActiveRoute,
-    onTriggerSOS: abrirConfirmEvacuacion, // Protocolo Evacuación abre el modal sin datos inventados
+    onNavigate: (route) => {
+      if (route === 'historial') {
+        // Al entrar directo desde el menú, mostrar todos los nodos
+        setHistorialNodoId('TODOS');
+      }
+      setActiveRoute(route);
+    },
+    onTriggerSOS: abrirConfirmEvacuacion,
     bocinaActiva: hayBocinaActiva,
     onToggleBocina: handleToggleBocinaSidebar,
     audioHabilitado,
@@ -78,9 +91,20 @@ function AppContent() {
           onToggleBocina={handleToggleBocinaNodo}
           bocinaGlobalActiva={bocinaGlobalActiva}
           onBocinaGlobal={handleBocinaGlobal}
+          onVerHistorial={handleVerHistorial}
         />
       );
     }
+
+    if (activeRoute === 'historial') {
+      return (
+        <HistorialPage
+          initialNodoId={historialNodoId}
+          onVolverTablero={() => setActiveRoute('tablero')}
+        />
+      );
+    }
+
     return (
       <div className="p-8 text-center text-secondary">
         <span className="material-symbols-outlined text-[48px] mb-2 block text-[#C29B38]">

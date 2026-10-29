@@ -17,6 +17,7 @@ export function TableroPage({
   onToggleBocina: onToggleBocinaProp,
   bocinaGlobalActiva: bocinaGlobalActivaProp,
   onBocinaGlobal: onBocinaGlobalProp,
+  onVerHistorial,
 }) {
   const { nodos } = useNodos();
   const { audioHabilitado, habilitarAudio } = useAlertasContext();
@@ -135,6 +136,7 @@ export function TableroPage({
           onToggleBocina={handleToggleBocina}
           bocinaGlobalActiva={bocinaGlobalActiva}
           onBocinaGlobal={handleBocinaGlobal}
+          onVerHistorial={onVerHistorial}
         />
       </div>
 

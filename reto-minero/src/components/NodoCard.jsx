@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TIPOS_SITIO } from '../config/tiposSitio.js';
 import { LIMITES_DECRETO_1886 } from '../config/limites.js';
+import { obtenerUltimasLecturasNodo } from '../demo/historialEjemplo.js';
+import { estimarTiempoHastaLimite } from '../core/prediccion.js';
 
 /**
- * Tarjeta individual de nodo sensor con telemetría y estado calculado.
+ * Tarjeta individual de nodo sensor con telemetría, predicción de tendencia y acceso al historial.
  * REGLA: Nunca lee un estado escrito a mano; usa nodo.evaluacion.
  */
 export function NodoCard({
@@ -11,6 +13,7 @@ export function NodoCard({
   isSelected,
   onActivarBocina,
   bocinaActiva = false,
+  onVerHistorial,
 }) {
   const [ahora] = useState(() => Date.now());
 
@@ -72,9 +75,15 @@ export function NodoCard({
   const tipoInfo = TIPOS_SITIO[tipoSitio];
   const limitKey = tipoInfo?.limiteMetanoKey;
   const limiteDato = limitKey ? LIMITES_DECRETO_1886.METANO_POR_SITIO[limitKey] : null;
-  const limiteValor = limiteDato?.limite ?? '--';
+  const limiteValor = limiteDato?.limite ?? 1.0;
   const limiteArticulo = LIMITES_DECRETO_1886.METANO_POR_SITIO.articulo;
   const tipoNombre = tipoInfo?.nombre ?? tipoSitio;
+
+  // ── Predicción de tendencia con las últimas 6 lecturas ───────────────────────
+  const prediccion = useMemo(() => {
+    const ultimas = obtenerUltimasLecturasNodo(id, 6, ahora);
+    return estimarTiempoHastaLimite(ultimas, limiteValor);
+  }, [id, limiteValor, ahora]);
 
   // ── Tiempo desde última transmisión ────────────────────────────────────────
   const fechaLectura = new Date(lectura?.fecha ?? 0);
@@ -120,6 +129,14 @@ export function NodoCard({
               {alertaPrincipal.mensaje}
             </span>
           )}
+
+          {/* Indicador de predicción de tendencia (solo si sube) */}
+          {prediccion?.tendencia === 'SUBIENDO' && prediccion.mensaje && (
+            <div className="flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded bg-[#A38A3A]/20 border border-[#A38A3A]/50 text-[#C2A855] font-code-badge text-[11px] font-bold self-start">
+              <span className="material-symbols-outlined text-[16px] animate-pulse">trending_up</span>
+              <span>{prediccion.mensaje}</span>
+            </div>
+          )}
         </div>
 
         {/* Badge de estado */}
@@ -131,7 +148,7 @@ export function NodoCard({
 
       {/* ── Lecturas de telemetría ────────────────────────────────────────── */}
       {nivelRiesgo === 'SIN_SEÑAL' ? (
-        /* Mensaje especial SIN_SEÑAL según normativa */
+        /* Mensaje especial SIN_SEÑAL */
         <div className="flex flex-col gap-2 my-3 p-3 bg-surface-container-lowest rounded border border-dashed border-[#5A606E]">
           <div className="flex items-center gap-2 text-[#9DA3B2]">
             <span className="material-symbols-outlined text-[20px]">signal_disconnected</span>
@@ -162,7 +179,7 @@ export function NodoCard({
               <span className="font-telemetry-unit text-[12px] text-secondary">%Vol</span>
             </div>
             <span className="font-code-badge text-[10px] text-secondary mt-0.5">
-              Límite: {limiteValor}% ({limiteArticulo})
+              Límite: {limiteValor.toFixed(1)}% ({limiteArticulo})
             </span>
           </div>
 
@@ -213,24 +230,38 @@ export function NodoCard({
           </span>
         </div>
 
-        {/* Bocina por nodo */}
-        {onActivarBocina && (
-          <button
-            type="button"
-            onClick={() => onActivarBocina(id)}
-            title={bocinaActiva ? 'Bocina activa · clic para desactivar' : 'Activar bocina en este sitio'}
-            className={`min-h-[40px] px-3 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase border transition-colors ${
-              bocinaActiva
-                ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
-                : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {bocinaActiva ? 'volume_up' : 'volume_off'}
-            </span>
-            <span>{bocinaActiva ? 'Bocina ON' : 'Bocina'}</span>
-          </button>
-        )}
+        {/* Acciones: Ver Historial + Bocina */}
+        <div className="flex items-center gap-2">
+          {onVerHistorial && (
+            <button
+              type="button"
+              onClick={() => onVerHistorial(id)}
+              title={`Ver historial de lecturas de ${nombre}`}
+              className="min-h-[40px] px-3 rounded flex items-center gap-1 font-action-label text-[12px] uppercase border bg-surface-container-high hover:bg-surface-variant text-secondary hover:text-on-surface border-[#2D3239] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">show_chart</span>
+              <span>Historial</span>
+            </button>
+          )}
+
+          {onActivarBocina && (
+            <button
+              type="button"
+              onClick={() => onActivarBocina(id)}
+              title={bocinaActiva ? 'Bocina activa · clic para desactivar' : 'Activar bocina en este sitio'}
+              className={`min-h-[40px] px-3 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase border transition-colors ${
+                bocinaActiva
+                  ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
+                  : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {bocinaActiva ? 'volume_up' : 'volume_off'}
+              </span>
+              <span>{bocinaActiva ? 'Bocina ON' : 'Bocina'}</span>
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

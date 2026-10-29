@@ -1,6 +1,7 @@
 import { evaluarNodo } from '../src/core/evaluador.js';
+import { estimarTiempoHastaLimite } from '../src/core/prediccion.js';
 
-console.log('🧪 Iniciando pruebas del evaluador normativo Decreto 1886...');
+console.log('🧪 Iniciando pruebas del evaluador normativo Decreto 1886 y predicción...');
 
 const ahora = new Date('2026-10-29T12:00:00Z');
 const haceUnMinuto = new Date(ahora.getTime() - 1 * 60 * 1000).toISOString();
@@ -58,5 +59,52 @@ console.assert(
 );
 console.log('✅ Caso 4: 12 min sin transmitir -> SIN_SEÑAL');
 
-console.log('🎉 ¡Todas las pruebas del evaluador pasaron exitosamente!');
+// ── Pruebas de prediccion.js ────────────────────────────────────────────────
+console.log('📈 Evaluando motor de predicción de tendencia (prediccion.js)...');
 
+// Caso 5: Tendencia SUBIENDO (sube a razón de ~0.1% cada 10 min -> límite 1.5% estimado en ~40 min)
+const tBase = ahora.getTime();
+const lecturasSubiendo = [
+  { ch4: 0.6, fecha: new Date(tBase - 50 * 60000).toISOString() },
+  { ch4: 0.7, fecha: new Date(tBase - 40 * 60000).toISOString() },
+  { ch4: 0.8, fecha: new Date(tBase - 30 * 60000).toISOString() },
+  { ch4: 0.9, fecha: new Date(tBase - 20 * 60000).toISOString() },
+  { ch4: 1.0, fecha: new Date(tBase - 10 * 60000).toISOString() },
+  { ch4: 1.1, fecha: new Date(tBase).toISOString() },
+];
+const resPredSubiendo = estimarTiempoHastaLimite(lecturasSubiendo, 1.5);
+console.assert(
+  resPredSubiendo.tendencia === 'SUBIENDO',
+  `Error Caso 5: esperado tendencia SUBIENDO, obtenido ${resPredSubiendo.tendencia}`
+);
+console.assert(
+  resPredSubiendo.minutosHastaLimite === 40,
+  `Error Caso 5: esperado ~40 min, obtenido ${resPredSubiendo.minutosHastaLimite}`
+);
+console.assert(
+  resPredSubiendo.mensaje && resPredSubiendo.mensaje.includes('1,5%') && resPredSubiendo.mensaje.includes('40 min'),
+  `Error Caso 5: formato de mensaje incorrecto: ${resPredSubiendo.mensaje}`
+);
+console.log(`✅ Caso 5: Predicción subiendo correcta -> "${resPredSubiendo.mensaje}"`);
+
+// Caso 6: Tendencia BAJANDO (concentración disminuyendo tras ventilación)
+const lecturasBajando = [
+  { ch4: 1.0, fecha: new Date(tBase - 50 * 60000).toISOString() },
+  { ch4: 0.9, fecha: new Date(tBase - 40 * 60000).toISOString() },
+  { ch4: 0.8, fecha: new Date(tBase - 30 * 60000).toISOString() },
+  { ch4: 0.7, fecha: new Date(tBase - 20 * 60000).toISOString() },
+  { ch4: 0.6, fecha: new Date(tBase - 10 * 60000).toISOString() },
+  { ch4: 0.5, fecha: new Date(tBase).toISOString() },
+];
+const resPredBajando = estimarTiempoHastaLimite(lecturasBajando, 1.5);
+console.assert(
+  resPredBajando.tendencia === 'BAJANDO',
+  `Error Caso 6: esperado tendencia BAJANDO, obtenido ${resPredBajando.tendencia}`
+);
+console.assert(
+  resPredBajando.minutosHastaLimite === null && resPredBajando.mensaje === null,
+  `Error Caso 6: cuando baja no debe proyectar tiempo al límite`
+);
+console.log('✅ Caso 6: Predicción bajando correcta -> sin mensaje de alerta');
+
+console.log('🎉 ¡Todas las pruebas del evaluador y de predicción pasaron exitosamente!');
