@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { KpiSummary } from '../components/KpiSummary';
 import { MineMap } from '../components/MineMap';
 import { SectorList } from '../components/SectorList';
@@ -17,14 +17,33 @@ export function TableroPage({ onTriggerAlarm }) {
   const [searchTerm, setSearchTerm]         = useState('');
   const [selectedNodoId, setSelectedNodoId] = useState(null);
 
-  const handleSelectNodo = (nodoId) => {
+  // ── Bocinas ──────────────────────────────────────────────────────────────────
+  const [bocinasActivas, setBocinasActivas] = useState({});   // { [nodoId]: boolean }
+  const [bocinaGlobalActiva, setBocinaGlobalActiva] = useState(false);
+
+  const handleToggleBocina = useCallback((nodoId) => {
+    setBocinasActivas((prev) => ({ ...prev, [nodoId]: !prev[nodoId] }));
+  }, []);
+
+  const handleBocinaGlobal = useCallback(() => {
+    setBocinaGlobalActiva((prev) => {
+      const next = !prev;
+      // Al desactivar global, limpiamos también las individuales
+      if (!next) setBocinasActivas({});
+      return next;
+    });
+  }, []);
+
+  // ── Selección de nodo ────────────────────────────────────────────────────────
+  const handleSelectNodo = useCallback((nodoId) => {
     setSelectedNodoId(nodoId);
+    // Scroll a la tarjeta en la lista
     const cardEl = document.getElementById(`card-${nodoId}`);
     if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+  }, []);
 
   /** Filtra por KPI activo (nivel de evaluación) y por texto de búsqueda.
-   *  El filtro "ALARMA" captura también EVACUACION. */
+   *  El filtro «ALARMA» captura también EVACUACION. */
   const nodosFiltrados = nodos.filter((nodo) => {
     const nivel = nodo.evaluacion?.nivel ?? 'NORMAL';
     const matchesFilter =
@@ -75,7 +94,12 @@ export function TableroPage({ onTriggerAlarm }) {
             setSelectedNodoId(null);
           }}
           selectedNodoId={selectedNodoId}
+          onSelectNodo={handleSelectNodo}
           onTriggerAlarm={onTriggerAlarm}
+          bocinasActivas={bocinasActivas}
+          onToggleBocina={handleToggleBocina}
+          bocinaGlobalActiva={bocinaGlobalActiva}
+          onBocinaGlobal={handleBocinaGlobal}
         />
       </div>
 

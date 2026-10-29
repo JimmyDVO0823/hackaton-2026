@@ -6,7 +6,7 @@ import { LIMITES_DECRETO_1886 } from '../config/limites.js';
  * Tarjeta individual de nodo sensor con telemetría y estado calculado.
  * REGLA: Nunca lee un estado escrito a mano; usa nodo.evaluacion.
  */
-export function NodoCard({ nodo, isSelected, onTriggerAlarm }) {
+export function NodoCard({ nodo, isSelected, onTriggerAlarm, onActivarBocina, bocinaActiva = false }) {
   const { id, nombre, ubicacion, tipoSitio, nivel, lectura, alarmaLocalActiva, evaluacion } = nodo;
   const nivelRiesgo = evaluacion?.nivel ?? 'NORMAL';
   const alertaPrincipal = evaluacion?.alertaPrincipal;
@@ -203,26 +203,22 @@ export function NodoCard({ nodo, isSelected, onTriggerAlarm }) {
           </span>
         </div>
 
-        {/* Acciones críticas */}
-        {(nivelRiesgo === 'ALARMA' || nivelRiesgo === 'EVACUACION') && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => alert(`Alarma silenciada localmente para ${nombre}.`)}
-              className="min-h-[44px] px-3 bg-surface-container-high text-secondary hover:text-on-surface rounded flex items-center justify-center font-action-label text-[12px] uppercase border border-[#2D3239] hover:bg-surface-variant transition-colors"
-            >
-              Silenciar
-            </button>
-            <button
-              type="button"
-              onClick={() => onTriggerAlarm(nombre)}
-              className="min-h-[44px] px-3.5 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase font-bold text-white bg-[#B2533E] hover:bg-[#c65e47] border border-[#d87661]"
-            >
-              <span className="material-symbols-outlined text-[18px]">emergency</span>
-              <span>Protocolo</span>
-            </button>
-          </div>
-        )}
+        {/* Bocina por nodo */}
+        <button
+          type="button"
+          onClick={() => onActivarBocina && onActivarBocina(id)}
+          title={bocinaActiva ? 'Bocina activa — clic para desactivar' : 'Activar bocina en este sitio'}
+          className={`min-h-[44px] px-3 rounded flex items-center gap-1.5 font-action-label text-[12px] uppercase border transition-colors ${
+            bocinaActiva
+              ? 'bg-[#4A7A5B]/30 text-[#6DAA81] border-[#4A7A5B] animate-pulse'
+              : 'bg-surface-container-high text-secondary hover:text-on-surface border-[#2D3239] hover:bg-surface-variant'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            {bocinaActiva ? 'volume_up' : 'volume_off'}
+          </span>
+          <span>{bocinaActiva ? 'Bocina ON' : 'Bocina'}</span>
+        </button>
       </div>
     </article>
   );
